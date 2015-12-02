@@ -28,7 +28,13 @@ var app = {
    // The scope of 'this' is the event. In order to call the 'receivedEvent'
    // function, we must explicity call 'app.receivedEvent(...);'
    register: function () {
-      $fh.push(app.onNotification, successHandler, errorHandler);
+      $fh.on("fhinit", function(err, host) {
+         if (!err) {
+            $fh.push(app.onNotification, successHandler, errorHandler);
+         } else {
+            errorHandler(err);
+         }
+      });
  
       function successHandler() {
          app.clearMessages();
