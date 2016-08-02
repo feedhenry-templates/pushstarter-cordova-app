@@ -37,9 +37,9 @@ If you wish to contribute to this template, the following information may be hel
 ## Build instructions
  * cd www
  * npm install
-
  * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.
- * cordova create <bundle-id> pushstarter --link-to www
+ * cd ..
+ * cordova create folderName `<bundle-id>` projectName --link-to www
  * cordova plugin add aerogear-cordova-push
  * cordova platform add <ios android windows>
  * cordova run --device
