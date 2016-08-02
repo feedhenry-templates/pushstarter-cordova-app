@@ -35,8 +35,8 @@ If you wish to contribute to this template, the following information may be hel
  * You also need to use the `package` from the Firebase Cloud Messaging configuration. In the studio, you specify this package on the *Config* menu in the *Android* option.
 
 ## Build instructions
+ * cd www
  * npm install
- * grunt browserify
 
  * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.
  * cordova create <bundle-id> pushstarter --link-to www
