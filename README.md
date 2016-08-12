@@ -1,15 +1,15 @@
 
 # Cordova Push Template
 ---------
-Author: Erik Jan de Wit   
-Level: Intermediate   
-Technologies: Javascript, Cordova, RHMAP   
-Summary: A demonstration of how to use push notifications with RHMAP.   
-Community Project : [Feed Henry](http://feedhenry.org)   
-Target Product: RHMAP   
-Product Versions: RHMAP 3.8.0+   
-Source: https://github.com/feedhenry-templates/pushstarter-cordova-app   
-Prerequisites: fh-js-sdk : 3.0.+, Cordova : 4.0 or newer   
+Author: Erik Jan de Wit
+Level: Intermediate
+Technologies: Javascript, Cordova, RHMAP
+Summary: A demonstration of how to use push notifications with RHMAP.
+Community Project : [Feed Henry](http://feedhenry.org)
+Target Product: RHMAP
+Product Versions: RHMAP 3.8.0+
+Source: https://github.com/feedhenry-templates/pushstarter-cordova-app
+Prerequisites: fh-js-sdk : 3.0.+, Cordova : 4.0 or newer
 
 ## What is it?
 
@@ -35,13 +35,8 @@ If you wish to contribute to this template, the following information may be hel
  * You also need to use the `package` from the Firebase Cloud Messaging configuration. In the studio, you specify this package on the *Config* menu in the *Android* option.
 
 ## Build instructions
- * cd www
  * npm install
  * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.
- * cd ..
- * cordova create folderName `<bundle-id>` projectName --link-to www
- * cordova plugin add aerogear-cordova-push
- * cordova platform add <ios android windows>
  * cordova run --device
 
 ## How does it work?
