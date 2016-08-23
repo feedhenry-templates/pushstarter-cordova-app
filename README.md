@@ -9,7 +9,7 @@ Community Project : [Feed Henry](http://feedhenry.org)
 Target Product: RHMAP
 Product Versions: RHMAP 3.8.0+
 Source: https://github.com/feedhenry-templates/pushstarter-cordova-app
-Prerequisites: fh-js-sdk : 3.0.+, Cordova : 4.0 or newer
+Prerequisites: fh-js-sdk : 2.14.+, Cordova : 5.0 or newer
 
 ## What is it?
 
@@ -27,7 +27,7 @@ This application and its cloud services are available as a project template in R
 If you wish to contribute to this template, the following information may be helpful; otherwise, RHMAP and its build facilities are the preferred solution.
 
 ###  Prerequisites
- * Cordova : 4.0 or newer
+ * Cordova : 5.0 or newer
 
 ## Firebase Cloud Messaging
 
@@ -38,6 +38,30 @@ If you wish to contribute to this template, the following information may be hel
  * npm install
  * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.
  * cordova run --device
+
+### npm dependencies
+The `fh-js-sdk` and other development dependencies are defined in [package.json](package.json) and included in a [browserified script](www/main.js).
+
+* This generated [main.js](www/main.js) file is checked-in to allow RHMAP studio preview to statically serve dependencies.
+
+* The [init.js](www/js/init.js) file is browserified and acts as a bridge between template script and npm dependencies. 
+
+* All the other JavaScript files in the template app will not be browserified, in order for you to be able to experiment live edit in RHMAP Studio preview.
+
+### Updating fh-js-sdk version
+To update the JS SDK:
+- change the version in [package.json](package.json)
+- run `npm install` a grunt task is automatically ran to regenerate main.js
+- check-in git repo the npackage.json + main.js
+
+### Grunt
+
+This template uses [Grunt](http://gruntjs.com/), the Javascript Task Runner. To use Grunt with this Template App, do the following:
+
+* Install grunt: ```npm install -g grunt-cli```
+* In your App directory, run: ```npm install```. This installs Grunt plugins, etc for use with this App.
+* Run ```grunt serve``` to preview this App locally
+
 
 ## How does it work?
 
