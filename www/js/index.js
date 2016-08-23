@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-$fh = require('fh-js-sdk');
 var app = {
    // Application Constructor
    initialize: function () {

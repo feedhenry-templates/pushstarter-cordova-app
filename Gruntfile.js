@@ -55,7 +55,7 @@ module.exports = function (grunt) {
     },
 
     browserify: {
-      'www/main.js': ['www/js/*.js']
+      'www/main.js': ['www/js/init.js']
     },
 
     // The actual grunt server settings
