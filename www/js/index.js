@@ -11,7 +11,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-$fh = require('fh-js-sdk');
 var app = {
    // Application Constructor
    initialize: function () {
@@ -30,7 +29,7 @@ var app = {
    // function, we must explicity call 'app.receivedEvent(...);'
    register: function () {
       $fh.push(app.onNotification, successHandler, errorHandler);
-
+ 
       function successHandler() {
          app.clearMessages();
          if (document.getElementById("messages").childElementCount === 0) {
@@ -60,5 +59,3 @@ var app = {
      waiting.parentElement.removeChild(waiting);
    }
 };
-
-app.initialize();

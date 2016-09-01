@@ -2,14 +2,14 @@
 # Cordova Push Template
 ---------
 Author: Erik Jan de Wit   
-Level: Intermediate   
-Technologies: Javascript, Cordova, RHMAP   
-Summary: A demonstration of how to use push notifications with RHMAP.   
-Community Project : [Feed Henry](http://feedhenry.org)   
-Target Product: RHMAP   
+Level: Intermediate  
+Technologies: Javascript, Cordova, RHMAP  
+Summary: A demonstration of how to use push notifications with RHMAP.  
+Community Project : [Feed Henry](http://feedhenry.org)
+Target Product: RHMAP  
 Product Versions: RHMAP 3.8.0+   
-Source: https://github.com/feedhenry-templates/pushstarter-cordova-app   
-Prerequisites: fh-js-sdk : 3.0.+, Cordova : 4.0 or newer   
+Source: https://github.com/feedhenry-templates/pushstarter-cordova-app  
+Prerequisites: fh-js-sdk : 3.0.+, Cordova : 4.0 or newer
 
 ## What is it?
 
@@ -17,7 +17,7 @@ This application shows a list of the push messages that have been recieved with 
 
 If you do not have access to a RHMAP instance, you can sign up for a free instance at [https://openshift.feedhenry.com/](https://openshift.feedhenry.com/).
 
-## How do I run it?
+## How do I run it?  
 
 ### RHMAP Studio
 
@@ -26,7 +26,8 @@ This application and its cloud services are available as a project template in R
 ### Local Clone (ideal for Open Source Development)
 If you wish to contribute to this template, the following information may be helpful; otherwise, RHMAP and its build facilities are the preferred solution.
 
-###  Prerequisites
+###  Prerequisites  
+ * fh-js-sdk : 3.0.+
  * Cordova : 4.0 or newer
 
 ## Firebase Cloud Messaging
@@ -35,11 +36,9 @@ If you wish to contribute to this template, the following information may be hel
  * You also need to use the `package` from the Firebase Cloud Messaging configuration. In the studio, you specify this package on the *Config* menu in the *Android* option.
 
 ## Build instructions
- * cd www
- * npm install
- * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.
- * cd ..
- * cordova create folderName `<bundle-id>` projectName --link-to www
+
+ * Edit [fhconfig.json](www/fhconfig.json) to include the relevant information from RHMAP.  
+ * cordova create <bundle-id> pushstarter
  * cordova plugin add aerogear-cordova-push
  * cordova platform add <ios android windows>
  * cordova run --device
