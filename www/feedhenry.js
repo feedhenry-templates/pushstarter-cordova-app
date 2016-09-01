@@ -1,70 +1,3 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-/* JBoss, Home of Professional Open Source
- * Copyright Red Hat, Inc., and individual contributors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-$fh = require('fh-js-sdk');
-var app = {
-   // Application Constructor
-   initialize: function () {
-      this.bindEvents();
-   },
-   // Bind Event Listeners
-   //
-   // Bind any events that are required on startup. Common events are:
-   // 'load', 'deviceready', 'offline', and 'online'.
-   bindEvents: function () {
-      document.addEventListener('deviceready', this.register, false);
-   },
-   // deviceready Event Handler
-   //
-   // The scope of 'this' is the event. In order to call the 'receivedEvent'
-   // function, we must explicity call 'app.receivedEvent(...);'
-   register: function () {
-      $fh.push(app.onNotification, successHandler, errorHandler);
-
-      function successHandler() {
-         app.clearMessages();
-         if (document.getElementById("messages").childElementCount === 0) {
-           document.getElementById("nothing").style.display = 'block';
-         }
-      }
-
-      function errorHandler(error) {
-         app.clearMessages();
-         app.addMessage('error registering ' + error);
-      }
-   },
-   onNotification: function (event) {
-      document.getElementById('nothing').style.display = 'none';
-      app.addMessage(event.alert || event.version);
-   },
-   addMessage: function (message) {
-      var messages = document.getElementById("messages"),
-         element = document.createElement("li");
-      //for ui testing add an id for easy (fast) selecting
-      element.setAttribute("id", "message" + (messages.childElementCount + 1));
-      messages.appendChild(element);
-      element.innerHTML = message;
-   },
-   clearMessages: function() {
-     var waiting = document.getElementById("waiting");
-     waiting.parentElement.removeChild(waiting);
-   }
-};
-
-app.initialize();
-},{"fh-js-sdk":2}],2:[function(require,module,exports){
-(function (global){
 !function(e){if("object"==typeof exports)module.exports=e();else if("function"==typeof define&&define.amd)define(e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.feedhenry=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 (function (global){
 ;__browserify_shim_require__=_dereq_;(function browserifyShim(module, exports, _dereq_, define, browserify_shim__define__module__export__) {
@@ -4176,241 +4109,6 @@ Lawnchair.adapter('webkit-sqlite', (function() {
     }
   }
 })());
-Lawnchair.adapter('indexed-db', (function(){
-
-  function fail(e, i) {
-    if(console) { console.log('error in indexed-db adapter!' + e.message, e, i); debugger;}
-  } ;
-
-  function getIDB(){
-    return window.indexedDB || window.webkitIndexedDB || window.mozIndexedDB || window.oIndexedDB || window.msIndexedDB;
-  };
-
-
-
-  return {
-
-    valid: function() { return !!getIDB(); },
-
-    init:function(options, callback) {
-      this.idb = getIDB();
-      this.waiting = [];
-      var request = this.idb.open(this.name, 2);
-      var self = this;
-      var cb = self.fn(self.name, callback);
-      var win = function(){ return cb.call(self, self); }
-      //FEEDHENRY CHANGE TO ALLOW ERROR CALLBACK
-      if(options && 'function' === typeof options.fail) fail = options.fail
-      //END CHANGE
-      request.onupgradeneeded = function(event){
-        self.store = request.result.createObjectStore("teststore", { autoIncrement: true} );
-        for (var i = 0; i < self.waiting.length; i++) {
-          self.waiting[i].call(self);
-        }
-        self.waiting = [];
-        win();
-      }
-
-      request.onsuccess = function(event) {
-        self.db = request.result;
-
-
-        if(self.db.version != "2.0") {
-          if(typeof self.db.setVersion == 'function'){
-
-            var setVrequest = self.db.setVersion("2.0");
-            // onsuccess is the only place we can create Object Stores
-            setVrequest.onsuccess = function(e) {
-              self.store = self.db.createObjectStore("teststore", { autoIncrement: true} );
-              for (var i = 0; i < self.waiting.length; i++) {
-                self.waiting[i].call(self);
-              }
-              self.waiting = [];
-              win();
-            };
-            setVrequest.onerror = function(e) {
-             // console.log("Failed to create objectstore " + e);
-              fail(e);
-            }
-
-          }
-        } else {
-          self.store = {};
-          for (var i = 0; i < self.waiting.length; i++) {
-            self.waiting[i].call(self);
-          }
-          self.waiting = [];
-          win();
-        }
-      }
-      request.onerror = fail;
-    },
-
-    save:function(obj, callback) {
-      if(!this.store) {
-        this.waiting.push(function() {
-          this.save(obj, callback);
-        });
-        return;
-      }
-
-      var self = this;
-      var win  = function (e) { if (callback) { obj.key = e.target.result; self.lambda(callback).call(self, obj) }};
-      var accessType = "readwrite";
-      var trans = this.db.transaction(["teststore"],accessType);
-      var store = trans.objectStore("teststore");
-      var request = obj.key ? store.put(obj, obj.key) : store.put(obj);
-
-      request.onsuccess = win;
-      request.onerror = fail;
-
-      return this;
-    },
-
-    // FIXME this should be a batch insert / just getting the test to pass...
-    batch: function (objs, cb) {
-
-      var results = []
-        ,   done = false
-        ,   self = this
-
-      var updateProgress = function(obj) {
-        results.push(obj)
-        done = results.length === objs.length
-      }
-
-      var checkProgress = setInterval(function() {
-        if (done) {
-          if (cb) self.lambda(cb).call(self, results)
-          clearInterval(checkProgress)
-        }
-      }, 200)
-
-      for (var i = 0, l = objs.length; i < l; i++)
-        this.save(objs[i], updateProgress)
-
-      return this
-    },
-
-
-    get:function(key, callback) {
-      if(!this.store || !this.db) {
-        this.waiting.push(function() {
-          this.get(key, callback);
-        });
-        return;
-      }
-
-
-      var self = this;
-      var win  = function (e) { if (callback) { self.lambda(callback).call(self, e.target.result) }};
-
-
-      if (!this.isArray(key)){
-        var req = this.db.transaction("teststore").objectStore("teststore").get(key);
-
-        req.onsuccess = win;
-        req.onerror = function(event) {
-          //console.log("Failed to find " + key);
-          fail(event);
-        };
-
-        // FIXME: again the setInterval solution to async callbacks..
-      } else {
-
-        // note: these are hosted.
-        var results = []
-          ,   done = false
-          ,   keys = key
-
-        var updateProgress = function(obj) {
-          results.push(obj)
-          done = results.length === keys.length
-        }
-
-        var checkProgress = setInterval(function() {
-          if (done) {
-            if (callback) self.lambda(callback).call(self, results)
-            clearInterval(checkProgress)
-          }
-        }, 200)
-
-        for (var i = 0, l = keys.length; i < l; i++)
-          this.get(keys[i], updateProgress)
-
-      }
-
-      return this;
-    },
-
-    all:function(callback) {
-      if(!this.store) {
-        this.waiting.push(function() {
-          this.all(callback);
-        });
-        return;
-      }
-      var cb = this.fn(this.name, callback) || undefined;
-      var self = this;
-      var objectStore = this.db.transaction("teststore").objectStore("teststore");
-      var toReturn = [];
-      objectStore.openCursor().onsuccess = function(event) {
-        var cursor = event.target.result;
-        if (cursor) {
-          toReturn.push(cursor.value);
-          cursor.continue();
-        }
-        else {
-          if (cb) cb.call(self, toReturn);
-        }
-      };
-      return this;
-    },
-
-    remove:function(keyOrObj, callback) {
-      if(!this.store) {
-        this.waiting.push(function() {
-          this.remove(keyOrObj, callback);
-        });
-        return;
-      }
-      if (typeof keyOrObj == "object") {
-        keyOrObj = keyOrObj.key;
-      }
-      var self = this;
-      var win  = function () { if (callback) self.lambda(callback).call(self) };
-
-      var request = this.db.transaction(["teststore"], "readwrite").objectStore("teststore").delete(keyOrObj);
-      request.onsuccess = win;
-      request.onerror = fail;
-      return this;
-    },
-
-    nuke:function(callback) {
-      if(!this.store) {
-        this.waiting.push(function() {
-          this.nuke(callback);
-        });
-        return;
-      }
-
-      var self = this
-        ,   win  = callback ? function() { self.lambda(callback).call(self) } : function(){};
-
-      try {
-        this.db
-          .transaction(["teststore"], "readwrite")
-          .objectStore("teststore").clear().onsuccess = win;
-
-      } catch(e) {
-        fail();
-      }
-      return this;
-    }
-
-  };
-
-})());
 Lawnchair.adapter('html5-filesystem', (function(global){
 
   var FileError = global.FileError;
@@ -4845,6 +4543,119 @@ Lawnchair.adapter('memory', (function(){
     }
 /////
 })());
+Lawnchair.adapter('titanium', (function(global){
+
+    return {
+        // boolean; true if the adapter is valid for the current environment
+        valid: function() {
+            return typeof Titanium !== 'undefined';
+        },
+
+        // constructor call and callback. 'name' is the most common option
+        init: function( options, callback ) {
+          if (callback){
+            return this.fn('init', callback).call(this)
+          }
+        },
+
+        // returns all the keys in the store
+        keys: function( callback ) {
+          if (callback) {
+            return this.fn('keys', callback).call(this, Titanium.App.Properties.listProperties());
+          }
+          return this;
+        },
+
+        // save an object
+        save: function( obj, callback ) {
+            var saveRes = Titanium.App.Properties.setObject(obj.key, obj);
+            if (callback) {
+              return this.fn('save', callback).call(this, saveRes);
+            }
+            return this;
+        },
+
+        // batch save array of objs
+        batch: function( objs, callback ) {
+            var me = this;
+            var saved = [];
+            for ( var i = 0, il = objs.length; i < il; i++ ) {
+                me.save( objs[i], function( obj ) {
+                    saved.push( obj );
+                    if ( saved.length === il && callback ) {
+                        me.lambda( callback ).call( me, saved );
+                    }
+                });
+            }
+            return this;
+        },
+
+        // retrieve obj (or array of objs) and apply callback to each
+        get: function( key /* or array */, callback ) {
+            var me = this;
+            if ( this.isArray( key ) ) {
+                var values = [];
+                for ( var i = 0, il = key.length; i < il; i++ ) {
+                    me.get( key[i], function( result ) {
+                        if ( result ) values.push( result );
+                        if ( values.length === il && callback ) {
+                            me.lambda( callback ).call( me, values );
+                        }
+                    });
+                }
+            } else {
+                return this.fn('init', callback).call(this, Titanium.App.Properties.getObject(key));
+            }
+            return this;
+        },
+
+        // check if an obj exists in the collection
+        exists: function( key, callback ) {
+            if (callback){
+              if (Titanium.App.Properties.getObject(key)){
+                return callback(this, true);
+              }else{
+                return callback(this, false);
+              }
+            }
+
+            return this;
+        },
+
+        // returns all the objs to the callback as an array
+        all: function( callback ) {
+            var me = this;
+            if ( callback ) {
+                this.keys(function( keys ) {
+                    if ( !keys.length ) {
+                        me.fn( me.name, callback ).call( me, [] );
+                    } else {
+                        me.get( keys, function( values ) {
+                            me.fn( me.name, callback ).call( me, values );
+                        });
+                    }
+                });
+            }
+            return this;
+        },
+
+        // remove a doc or collection of em
+        remove: function( key /* or object */, callback ) {
+            var me = this;
+            Titanium.App.Properties.removeProperty(key);
+            if (callback) {
+              return this.fn('remove', callback).call(this);
+            }
+            return this;
+        },
+
+        // destroy everything
+        nuke: function( callback ) {
+            // nah, lets not do that
+        }
+    };
+}(this)));
+
 ; browserify_shim__define__module__export__(typeof Lawnchair != "undefined" ? Lawnchair : window.Lawnchair);
 
 }).call(global, undefined, undefined, undefined, undefined, function defineExport(ex) { module.exports = ex; });
@@ -6467,16 +6278,6 @@ process.browser = true;
 process.env = {};
 process.argv = [];
 
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
 process.binding = function (name) {
     throw new Error('process.binding is not supported');
 }
@@ -6492,508 +6293,508 @@ process.chdir = function (dir) {
 /*! http://mths.be/punycode v1.2.4 by @mathias */
 ;(function(root) {
 
-	/** Detect free variables */
-	var freeExports = typeof exports == 'object' && exports;
-	var freeModule = typeof module == 'object' && module &&
-		module.exports == freeExports && module;
-	var freeGlobal = typeof global == 'object' && global;
-	if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
-		root = freeGlobal;
-	}
+  /** Detect free variables */
+  var freeExports = typeof exports == 'object' && exports;
+  var freeModule = typeof module == 'object' && module &&
+    module.exports == freeExports && module;
+  var freeGlobal = typeof global == 'object' && global;
+  if (freeGlobal.global === freeGlobal || freeGlobal.window === freeGlobal) {
+    root = freeGlobal;
+  }
 
-	/**
-	 * The `punycode` object.
-	 * @name punycode
-	 * @type Object
-	 */
-	var punycode,
+  /**
+   * The `punycode` object.
+   * @name punycode
+   * @type Object
+   */
+  var punycode,
 
-	/** Highest positive signed 32-bit float value */
-	maxInt = 2147483647, // aka. 0x7FFFFFFF or 2^31-1
+  /** Highest positive signed 32-bit float value */
+  maxInt = 2147483647, // aka. 0x7FFFFFFF or 2^31-1
 
-	/** Bootstring parameters */
-	base = 36,
-	tMin = 1,
-	tMax = 26,
-	skew = 38,
-	damp = 700,
-	initialBias = 72,
-	initialN = 128, // 0x80
-	delimiter = '-', // '\x2D'
+  /** Bootstring parameters */
+  base = 36,
+  tMin = 1,
+  tMax = 26,
+  skew = 38,
+  damp = 700,
+  initialBias = 72,
+  initialN = 128, // 0x80
+  delimiter = '-', // '\x2D'
 
-	/** Regular expressions */
-	regexPunycode = /^xn--/,
-	regexNonASCII = /[^ -~]/, // unprintable ASCII chars + non-ASCII chars
-	regexSeparators = /\x2E|\u3002|\uFF0E|\uFF61/g, // RFC 3490 separators
+  /** Regular expressions */
+  regexPunycode = /^xn--/,
+  regexNonASCII = /[^ -~]/, // unprintable ASCII chars + non-ASCII chars
+  regexSeparators = /\x2E|\u3002|\uFF0E|\uFF61/g, // RFC 3490 separators
 
-	/** Error messages */
-	errors = {
-		'overflow': 'Overflow: input needs wider integers to process',
-		'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
-		'invalid-input': 'Invalid input'
-	},
+  /** Error messages */
+  errors = {
+    'overflow': 'Overflow: input needs wider integers to process',
+    'not-basic': 'Illegal input >= 0x80 (not a basic code point)',
+    'invalid-input': 'Invalid input'
+  },
 
-	/** Convenience shortcuts */
-	baseMinusTMin = base - tMin,
-	floor = Math.floor,
-	stringFromCharCode = String.fromCharCode,
+  /** Convenience shortcuts */
+  baseMinusTMin = base - tMin,
+  floor = Math.floor,
+  stringFromCharCode = String.fromCharCode,
 
-	/** Temporary variable */
-	key;
+  /** Temporary variable */
+  key;
 
-	/*--------------------------------------------------------------------------*/
+  /*--------------------------------------------------------------------------*/
 
-	/**
-	 * A generic error utility function.
-	 * @private
-	 * @param {String} type The error type.
-	 * @returns {Error} Throws a `RangeError` with the applicable error message.
-	 */
-	function error(type) {
-		throw RangeError(errors[type]);
-	}
+  /**
+   * A generic error utility function.
+   * @private
+   * @param {String} type The error type.
+   * @returns {Error} Throws a `RangeError` with the applicable error message.
+   */
+  function error(type) {
+    throw RangeError(errors[type]);
+  }
 
-	/**
-	 * A generic `Array#map` utility function.
-	 * @private
-	 * @param {Array} array The array to iterate over.
-	 * @param {Function} callback The function that gets called for every array
-	 * item.
-	 * @returns {Array} A new array of values returned by the callback function.
-	 */
-	function map(array, fn) {
-		var length = array.length;
-		while (length--) {
-			array[length] = fn(array[length]);
-		}
-		return array;
-	}
+  /**
+   * A generic `Array#map` utility function.
+   * @private
+   * @param {Array} array The array to iterate over.
+   * @param {Function} callback The function that gets called for every array
+   * item.
+   * @returns {Array} A new array of values returned by the callback function.
+   */
+  function map(array, fn) {
+    var length = array.length;
+    while (length--) {
+      array[length] = fn(array[length]);
+    }
+    return array;
+  }
 
-	/**
-	 * A simple `Array#map`-like wrapper to work with domain name strings.
-	 * @private
-	 * @param {String} domain The domain name.
-	 * @param {Function} callback The function that gets called for every
-	 * character.
-	 * @returns {Array} A new string of characters returned by the callback
-	 * function.
-	 */
-	function mapDomain(string, fn) {
-		return map(string.split(regexSeparators), fn).join('.');
-	}
+  /**
+   * A simple `Array#map`-like wrapper to work with domain name strings.
+   * @private
+   * @param {String} domain The domain name.
+   * @param {Function} callback The function that gets called for every
+   * character.
+   * @returns {Array} A new string of characters returned by the callback
+   * function.
+   */
+  function mapDomain(string, fn) {
+    return map(string.split(regexSeparators), fn).join('.');
+  }
 
-	/**
-	 * Creates an array containing the numeric code points of each Unicode
-	 * character in the string. While JavaScript uses UCS-2 internally,
-	 * this function will convert a pair of surrogate halves (each of which
-	 * UCS-2 exposes as separate characters) into a single code point,
-	 * matching UTF-16.
-	 * @see `punycode.ucs2.encode`
-	 * @see <http://mathiasbynens.be/notes/javascript-encoding>
-	 * @memberOf punycode.ucs2
-	 * @name decode
-	 * @param {String} string The Unicode input string (UCS-2).
-	 * @returns {Array} The new array of code points.
-	 */
-	function ucs2decode(string) {
-		var output = [],
-		    counter = 0,
-		    length = string.length,
-		    value,
-		    extra;
-		while (counter < length) {
-			value = string.charCodeAt(counter++);
-			if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
-				// high surrogate, and there is a next character
-				extra = string.charCodeAt(counter++);
-				if ((extra & 0xFC00) == 0xDC00) { // low surrogate
-					output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
-				} else {
-					// unmatched surrogate; only append this code unit, in case the next
-					// code unit is the high surrogate of a surrogate pair
-					output.push(value);
-					counter--;
-				}
-			} else {
-				output.push(value);
-			}
-		}
-		return output;
-	}
+  /**
+   * Creates an array containing the numeric code points of each Unicode
+   * character in the string. While JavaScript uses UCS-2 internally,
+   * this function will convert a pair of surrogate halves (each of which
+   * UCS-2 exposes as separate characters) into a single code point,
+   * matching UTF-16.
+   * @see `punycode.ucs2.encode`
+   * @see <http://mathiasbynens.be/notes/javascript-encoding>
+   * @memberOf punycode.ucs2
+   * @name decode
+   * @param {String} string The Unicode input string (UCS-2).
+   * @returns {Array} The new array of code points.
+   */
+  function ucs2decode(string) {
+    var output = [],
+        counter = 0,
+        length = string.length,
+        value,
+        extra;
+    while (counter < length) {
+      value = string.charCodeAt(counter++);
+      if (value >= 0xD800 && value <= 0xDBFF && counter < length) {
+        // high surrogate, and there is a next character
+        extra = string.charCodeAt(counter++);
+        if ((extra & 0xFC00) == 0xDC00) { // low surrogate
+          output.push(((value & 0x3FF) << 10) + (extra & 0x3FF) + 0x10000);
+        } else {
+          // unmatched surrogate; only append this code unit, in case the next
+          // code unit is the high surrogate of a surrogate pair
+          output.push(value);
+          counter--;
+        }
+      } else {
+        output.push(value);
+      }
+    }
+    return output;
+  }
 
-	/**
-	 * Creates a string based on an array of numeric code points.
-	 * @see `punycode.ucs2.decode`
-	 * @memberOf punycode.ucs2
-	 * @name encode
-	 * @param {Array} codePoints The array of numeric code points.
-	 * @returns {String} The new Unicode string (UCS-2).
-	 */
-	function ucs2encode(array) {
-		return map(array, function(value) {
-			var output = '';
-			if (value > 0xFFFF) {
-				value -= 0x10000;
-				output += stringFromCharCode(value >>> 10 & 0x3FF | 0xD800);
-				value = 0xDC00 | value & 0x3FF;
-			}
-			output += stringFromCharCode(value);
-			return output;
-		}).join('');
-	}
+  /**
+   * Creates a string based on an array of numeric code points.
+   * @see `punycode.ucs2.decode`
+   * @memberOf punycode.ucs2
+   * @name encode
+   * @param {Array} codePoints The array of numeric code points.
+   * @returns {String} The new Unicode string (UCS-2).
+   */
+  function ucs2encode(array) {
+    return map(array, function(value) {
+      var output = '';
+      if (value > 0xFFFF) {
+        value -= 0x10000;
+        output += stringFromCharCode(value >>> 10 & 0x3FF | 0xD800);
+        value = 0xDC00 | value & 0x3FF;
+      }
+      output += stringFromCharCode(value);
+      return output;
+    }).join('');
+  }
 
-	/**
-	 * Converts a basic code point into a digit/integer.
-	 * @see `digitToBasic()`
-	 * @private
-	 * @param {Number} codePoint The basic numeric code point value.
-	 * @returns {Number} The numeric value of a basic code point (for use in
-	 * representing integers) in the range `0` to `base - 1`, or `base` if
-	 * the code point does not represent a value.
-	 */
-	function basicToDigit(codePoint) {
-		if (codePoint - 48 < 10) {
-			return codePoint - 22;
-		}
-		if (codePoint - 65 < 26) {
-			return codePoint - 65;
-		}
-		if (codePoint - 97 < 26) {
-			return codePoint - 97;
-		}
-		return base;
-	}
+  /**
+   * Converts a basic code point into a digit/integer.
+   * @see `digitToBasic()`
+   * @private
+   * @param {Number} codePoint The basic numeric code point value.
+   * @returns {Number} The numeric value of a basic code point (for use in
+   * representing integers) in the range `0` to `base - 1`, or `base` if
+   * the code point does not represent a value.
+   */
+  function basicToDigit(codePoint) {
+    if (codePoint - 48 < 10) {
+      return codePoint - 22;
+    }
+    if (codePoint - 65 < 26) {
+      return codePoint - 65;
+    }
+    if (codePoint - 97 < 26) {
+      return codePoint - 97;
+    }
+    return base;
+  }
 
-	/**
-	 * Converts a digit/integer into a basic code point.
-	 * @see `basicToDigit()`
-	 * @private
-	 * @param {Number} digit The numeric value of a basic code point.
-	 * @returns {Number} The basic code point whose value (when used for
-	 * representing integers) is `digit`, which needs to be in the range
-	 * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
-	 * used; else, the lowercase form is used. The behavior is undefined
-	 * if `flag` is non-zero and `digit` has no uppercase form.
-	 */
-	function digitToBasic(digit, flag) {
-		//  0..25 map to ASCII a..z or A..Z
-		// 26..35 map to ASCII 0..9
-		return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
-	}
+  /**
+   * Converts a digit/integer into a basic code point.
+   * @see `basicToDigit()`
+   * @private
+   * @param {Number} digit The numeric value of a basic code point.
+   * @returns {Number} The basic code point whose value (when used for
+   * representing integers) is `digit`, which needs to be in the range
+   * `0` to `base - 1`. If `flag` is non-zero, the uppercase form is
+   * used; else, the lowercase form is used. The behavior is undefined
+   * if `flag` is non-zero and `digit` has no uppercase form.
+   */
+  function digitToBasic(digit, flag) {
+    //  0..25 map to ASCII a..z or A..Z
+    // 26..35 map to ASCII 0..9
+    return digit + 22 + 75 * (digit < 26) - ((flag != 0) << 5);
+  }
 
-	/**
-	 * Bias adaptation function as per section 3.4 of RFC 3492.
-	 * http://tools.ietf.org/html/rfc3492#section-3.4
-	 * @private
-	 */
-	function adapt(delta, numPoints, firstTime) {
-		var k = 0;
-		delta = firstTime ? floor(delta / damp) : delta >> 1;
-		delta += floor(delta / numPoints);
-		for (/* no initialization */; delta > baseMinusTMin * tMax >> 1; k += base) {
-			delta = floor(delta / baseMinusTMin);
-		}
-		return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
-	}
+  /**
+   * Bias adaptation function as per section 3.4 of RFC 3492.
+   * http://tools.ietf.org/html/rfc3492#section-3.4
+   * @private
+   */
+  function adapt(delta, numPoints, firstTime) {
+    var k = 0;
+    delta = firstTime ? floor(delta / damp) : delta >> 1;
+    delta += floor(delta / numPoints);
+    for (/* no initialization */; delta > baseMinusTMin * tMax >> 1; k += base) {
+      delta = floor(delta / baseMinusTMin);
+    }
+    return floor(k + (baseMinusTMin + 1) * delta / (delta + skew));
+  }
 
-	/**
-	 * Converts a Punycode string of ASCII-only symbols to a string of Unicode
-	 * symbols.
-	 * @memberOf punycode
-	 * @param {String} input The Punycode string of ASCII-only symbols.
-	 * @returns {String} The resulting string of Unicode symbols.
-	 */
-	function decode(input) {
-		// Don't use UCS-2
-		var output = [],
-		    inputLength = input.length,
-		    out,
-		    i = 0,
-		    n = initialN,
-		    bias = initialBias,
-		    basic,
-		    j,
-		    index,
-		    oldi,
-		    w,
-		    k,
-		    digit,
-		    t,
-		    /** Cached calculation results */
-		    baseMinusT;
+  /**
+   * Converts a Punycode string of ASCII-only symbols to a string of Unicode
+   * symbols.
+   * @memberOf punycode
+   * @param {String} input The Punycode string of ASCII-only symbols.
+   * @returns {String} The resulting string of Unicode symbols.
+   */
+  function decode(input) {
+    // Don't use UCS-2
+    var output = [],
+        inputLength = input.length,
+        out,
+        i = 0,
+        n = initialN,
+        bias = initialBias,
+        basic,
+        j,
+        index,
+        oldi,
+        w,
+        k,
+        digit,
+        t,
+        /** Cached calculation results */
+        baseMinusT;
 
-		// Handle the basic code points: let `basic` be the number of input code
-		// points before the last delimiter, or `0` if there is none, then copy
-		// the first basic code points to the output.
+    // Handle the basic code points: let `basic` be the number of input code
+    // points before the last delimiter, or `0` if there is none, then copy
+    // the first basic code points to the output.
 
-		basic = input.lastIndexOf(delimiter);
-		if (basic < 0) {
-			basic = 0;
-		}
+    basic = input.lastIndexOf(delimiter);
+    if (basic < 0) {
+      basic = 0;
+    }
 
-		for (j = 0; j < basic; ++j) {
-			// if it's not a basic code point
-			if (input.charCodeAt(j) >= 0x80) {
-				error('not-basic');
-			}
-			output.push(input.charCodeAt(j));
-		}
+    for (j = 0; j < basic; ++j) {
+      // if it's not a basic code point
+      if (input.charCodeAt(j) >= 0x80) {
+        error('not-basic');
+      }
+      output.push(input.charCodeAt(j));
+    }
 
-		// Main decoding loop: start just after the last delimiter if any basic code
-		// points were copied; start at the beginning otherwise.
+    // Main decoding loop: start just after the last delimiter if any basic code
+    // points were copied; start at the beginning otherwise.
 
-		for (index = basic > 0 ? basic + 1 : 0; index < inputLength; /* no final expression */) {
+    for (index = basic > 0 ? basic + 1 : 0; index < inputLength; /* no final expression */) {
 
-			// `index` is the index of the next character to be consumed.
-			// Decode a generalized variable-length integer into `delta`,
-			// which gets added to `i`. The overflow checking is easier
-			// if we increase `i` as we go, then subtract off its starting
-			// value at the end to obtain `delta`.
-			for (oldi = i, w = 1, k = base; /* no condition */; k += base) {
+      // `index` is the index of the next character to be consumed.
+      // Decode a generalized variable-length integer into `delta`,
+      // which gets added to `i`. The overflow checking is easier
+      // if we increase `i` as we go, then subtract off its starting
+      // value at the end to obtain `delta`.
+      for (oldi = i, w = 1, k = base; /* no condition */; k += base) {
 
-				if (index >= inputLength) {
-					error('invalid-input');
-				}
+        if (index >= inputLength) {
+          error('invalid-input');
+        }
 
-				digit = basicToDigit(input.charCodeAt(index++));
+        digit = basicToDigit(input.charCodeAt(index++));
 
-				if (digit >= base || digit > floor((maxInt - i) / w)) {
-					error('overflow');
-				}
+        if (digit >= base || digit > floor((maxInt - i) / w)) {
+          error('overflow');
+        }
 
-				i += digit * w;
-				t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+        i += digit * w;
+        t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
 
-				if (digit < t) {
-					break;
-				}
+        if (digit < t) {
+          break;
+        }
 
-				baseMinusT = base - t;
-				if (w > floor(maxInt / baseMinusT)) {
-					error('overflow');
-				}
+        baseMinusT = base - t;
+        if (w > floor(maxInt / baseMinusT)) {
+          error('overflow');
+        }
 
-				w *= baseMinusT;
+        w *= baseMinusT;
 
-			}
+      }
 
-			out = output.length + 1;
-			bias = adapt(i - oldi, out, oldi == 0);
+      out = output.length + 1;
+      bias = adapt(i - oldi, out, oldi == 0);
 
-			// `i` was supposed to wrap around from `out` to `0`,
-			// incrementing `n` each time, so we'll fix that now:
-			if (floor(i / out) > maxInt - n) {
-				error('overflow');
-			}
+      // `i` was supposed to wrap around from `out` to `0`,
+      // incrementing `n` each time, so we'll fix that now:
+      if (floor(i / out) > maxInt - n) {
+        error('overflow');
+      }
 
-			n += floor(i / out);
-			i %= out;
+      n += floor(i / out);
+      i %= out;
 
-			// Insert `n` at position `i` of the output
-			output.splice(i++, 0, n);
+      // Insert `n` at position `i` of the output
+      output.splice(i++, 0, n);
 
-		}
+    }
 
-		return ucs2encode(output);
-	}
+    return ucs2encode(output);
+  }
 
-	/**
-	 * Converts a string of Unicode symbols to a Punycode string of ASCII-only
-	 * symbols.
-	 * @memberOf punycode
-	 * @param {String} input The string of Unicode symbols.
-	 * @returns {String} The resulting Punycode string of ASCII-only symbols.
-	 */
-	function encode(input) {
-		var n,
-		    delta,
-		    handledCPCount,
-		    basicLength,
-		    bias,
-		    j,
-		    m,
-		    q,
-		    k,
-		    t,
-		    currentValue,
-		    output = [],
-		    /** `inputLength` will hold the number of code points in `input`. */
-		    inputLength,
-		    /** Cached calculation results */
-		    handledCPCountPlusOne,
-		    baseMinusT,
-		    qMinusT;
+  /**
+   * Converts a string of Unicode symbols to a Punycode string of ASCII-only
+   * symbols.
+   * @memberOf punycode
+   * @param {String} input The string of Unicode symbols.
+   * @returns {String} The resulting Punycode string of ASCII-only symbols.
+   */
+  function encode(input) {
+    var n,
+        delta,
+        handledCPCount,
+        basicLength,
+        bias,
+        j,
+        m,
+        q,
+        k,
+        t,
+        currentValue,
+        output = [],
+        /** `inputLength` will hold the number of code points in `input`. */
+        inputLength,
+        /** Cached calculation results */
+        handledCPCountPlusOne,
+        baseMinusT,
+        qMinusT;
 
-		// Convert the input in UCS-2 to Unicode
-		input = ucs2decode(input);
+    // Convert the input in UCS-2 to Unicode
+    input = ucs2decode(input);
 
-		// Cache the length
-		inputLength = input.length;
+    // Cache the length
+    inputLength = input.length;
 
-		// Initialize the state
-		n = initialN;
-		delta = 0;
-		bias = initialBias;
+    // Initialize the state
+    n = initialN;
+    delta = 0;
+    bias = initialBias;
 
-		// Handle the basic code points
-		for (j = 0; j < inputLength; ++j) {
-			currentValue = input[j];
-			if (currentValue < 0x80) {
-				output.push(stringFromCharCode(currentValue));
-			}
-		}
+    // Handle the basic code points
+    for (j = 0; j < inputLength; ++j) {
+      currentValue = input[j];
+      if (currentValue < 0x80) {
+        output.push(stringFromCharCode(currentValue));
+      }
+    }
 
-		handledCPCount = basicLength = output.length;
+    handledCPCount = basicLength = output.length;
 
-		// `handledCPCount` is the number of code points that have been handled;
-		// `basicLength` is the number of basic code points.
+    // `handledCPCount` is the number of code points that have been handled;
+    // `basicLength` is the number of basic code points.
 
-		// Finish the basic string - if it is not empty - with a delimiter
-		if (basicLength) {
-			output.push(delimiter);
-		}
+    // Finish the basic string - if it is not empty - with a delimiter
+    if (basicLength) {
+      output.push(delimiter);
+    }
 
-		// Main encoding loop:
-		while (handledCPCount < inputLength) {
+    // Main encoding loop:
+    while (handledCPCount < inputLength) {
 
-			// All non-basic code points < n have been handled already. Find the next
-			// larger one:
-			for (m = maxInt, j = 0; j < inputLength; ++j) {
-				currentValue = input[j];
-				if (currentValue >= n && currentValue < m) {
-					m = currentValue;
-				}
-			}
+      // All non-basic code points < n have been handled already. Find the next
+      // larger one:
+      for (m = maxInt, j = 0; j < inputLength; ++j) {
+        currentValue = input[j];
+        if (currentValue >= n && currentValue < m) {
+          m = currentValue;
+        }
+      }
 
-			// Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
-			// but guard against overflow
-			handledCPCountPlusOne = handledCPCount + 1;
-			if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
-				error('overflow');
-			}
+      // Increase `delta` enough to advance the decoder's <n,i> state to <m,0>,
+      // but guard against overflow
+      handledCPCountPlusOne = handledCPCount + 1;
+      if (m - n > floor((maxInt - delta) / handledCPCountPlusOne)) {
+        error('overflow');
+      }
 
-			delta += (m - n) * handledCPCountPlusOne;
-			n = m;
+      delta += (m - n) * handledCPCountPlusOne;
+      n = m;
 
-			for (j = 0; j < inputLength; ++j) {
-				currentValue = input[j];
+      for (j = 0; j < inputLength; ++j) {
+        currentValue = input[j];
 
-				if (currentValue < n && ++delta > maxInt) {
-					error('overflow');
-				}
+        if (currentValue < n && ++delta > maxInt) {
+          error('overflow');
+        }
 
-				if (currentValue == n) {
-					// Represent delta as a generalized variable-length integer
-					for (q = delta, k = base; /* no condition */; k += base) {
-						t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
-						if (q < t) {
-							break;
-						}
-						qMinusT = q - t;
-						baseMinusT = base - t;
-						output.push(
-							stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
-						);
-						q = floor(qMinusT / baseMinusT);
-					}
+        if (currentValue == n) {
+          // Represent delta as a generalized variable-length integer
+          for (q = delta, k = base; /* no condition */; k += base) {
+            t = k <= bias ? tMin : (k >= bias + tMax ? tMax : k - bias);
+            if (q < t) {
+              break;
+            }
+            qMinusT = q - t;
+            baseMinusT = base - t;
+            output.push(
+              stringFromCharCode(digitToBasic(t + qMinusT % baseMinusT, 0))
+            );
+            q = floor(qMinusT / baseMinusT);
+          }
 
-					output.push(stringFromCharCode(digitToBasic(q, 0)));
-					bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
-					delta = 0;
-					++handledCPCount;
-				}
-			}
+          output.push(stringFromCharCode(digitToBasic(q, 0)));
+          bias = adapt(delta, handledCPCountPlusOne, handledCPCount == basicLength);
+          delta = 0;
+          ++handledCPCount;
+        }
+      }
 
-			++delta;
-			++n;
+      ++delta;
+      ++n;
 
-		}
-		return output.join('');
-	}
+    }
+    return output.join('');
+  }
 
-	/**
-	 * Converts a Punycode string representing a domain name to Unicode. Only the
-	 * Punycoded parts of the domain name will be converted, i.e. it doesn't
-	 * matter if you call it on a string that has already been converted to
-	 * Unicode.
-	 * @memberOf punycode
-	 * @param {String} domain The Punycode domain name to convert to Unicode.
-	 * @returns {String} The Unicode representation of the given Punycode
-	 * string.
-	 */
-	function toUnicode(domain) {
-		return mapDomain(domain, function(string) {
-			return regexPunycode.test(string)
-				? decode(string.slice(4).toLowerCase())
-				: string;
-		});
-	}
+  /**
+   * Converts a Punycode string representing a domain name to Unicode. Only the
+   * Punycoded parts of the domain name will be converted, i.e. it doesn't
+   * matter if you call it on a string that has already been converted to
+   * Unicode.
+   * @memberOf punycode
+   * @param {String} domain The Punycode domain name to convert to Unicode.
+   * @returns {String} The Unicode representation of the given Punycode
+   * string.
+   */
+  function toUnicode(domain) {
+    return mapDomain(domain, function(string) {
+      return regexPunycode.test(string)
+        ? decode(string.slice(4).toLowerCase())
+        : string;
+    });
+  }
 
-	/**
-	 * Converts a Unicode string representing a domain name to Punycode. Only the
-	 * non-ASCII parts of the domain name will be converted, i.e. it doesn't
-	 * matter if you call it with a domain that's already in ASCII.
-	 * @memberOf punycode
-	 * @param {String} domain The domain name to convert, as a Unicode string.
-	 * @returns {String} The Punycode representation of the given domain name.
-	 */
-	function toASCII(domain) {
-		return mapDomain(domain, function(string) {
-			return regexNonASCII.test(string)
-				? 'xn--' + encode(string)
-				: string;
-		});
-	}
+  /**
+   * Converts a Unicode string representing a domain name to Punycode. Only the
+   * non-ASCII parts of the domain name will be converted, i.e. it doesn't
+   * matter if you call it with a domain that's already in ASCII.
+   * @memberOf punycode
+   * @param {String} domain The domain name to convert, as a Unicode string.
+   * @returns {String} The Punycode representation of the given domain name.
+   */
+  function toASCII(domain) {
+    return mapDomain(domain, function(string) {
+      return regexNonASCII.test(string)
+        ? 'xn--' + encode(string)
+        : string;
+    });
+  }
 
-	/*--------------------------------------------------------------------------*/
+  /*--------------------------------------------------------------------------*/
 
-	/** Define the public API */
-	punycode = {
-		/**
-		 * A string representing the current Punycode.js version number.
-		 * @memberOf punycode
-		 * @type String
-		 */
-		'version': '1.2.4',
-		/**
-		 * An object of methods to convert from JavaScript's internal character
-		 * representation (UCS-2) to Unicode code points, and back.
-		 * @see <http://mathiasbynens.be/notes/javascript-encoding>
-		 * @memberOf punycode
-		 * @type Object
-		 */
-		'ucs2': {
-			'decode': ucs2decode,
-			'encode': ucs2encode
-		},
-		'decode': decode,
-		'encode': encode,
-		'toASCII': toASCII,
-		'toUnicode': toUnicode
-	};
+  /** Define the public API */
+  punycode = {
+    /**
+     * A string representing the current Punycode.js version number.
+     * @memberOf punycode
+     * @type String
+     */
+    'version': '1.2.4',
+    /**
+     * An object of methods to convert from JavaScript's internal character
+     * representation (UCS-2) to Unicode code points, and back.
+     * @see <http://mathiasbynens.be/notes/javascript-encoding>
+     * @memberOf punycode
+     * @type Object
+     */
+    'ucs2': {
+      'decode': ucs2decode,
+      'encode': ucs2encode
+    },
+    'decode': decode,
+    'encode': encode,
+    'toASCII': toASCII,
+    'toUnicode': toUnicode
+  };
 
-	/** Expose `punycode` */
-	// Some AMD build optimizers, like r.js, check for specific condition patterns
-	// like the following:
-	if (
-		typeof define == 'function' &&
-		typeof define.amd == 'object' &&
-		define.amd
-	) {
-		define('punycode', function() {
-			return punycode;
-		});
-	} else if (freeExports && !freeExports.nodeType) {
-		if (freeModule) { // in Node.js or RingoJS v0.8.0+
-			freeModule.exports = punycode;
-		} else { // in Narwhal or RingoJS v0.7.0-
-			for (key in punycode) {
-				punycode.hasOwnProperty(key) && (freeExports[key] = punycode[key]);
-			}
-		}
-	} else { // in Rhino or a web browser
-		root.punycode = punycode;
-	}
+  /** Expose `punycode` */
+  // Some AMD build optimizers, like r.js, check for specific condition patterns
+  // like the following:
+  if (
+    typeof define == 'function' &&
+    typeof define.amd == 'object' &&
+    define.amd
+  ) {
+    define('punycode', function() {
+      return punycode;
+    });
+  } else if (freeExports && !freeExports.nodeType) {
+    if (freeModule) { // in Node.js or RingoJS v0.8.0+
+      freeModule.exports = punycode;
+    } else { // in Narwhal or RingoJS v0.7.0-
+      for (key in punycode) {
+        punycode.hasOwnProperty(key) && (freeExports[key] = punycode[key]);
+      }
+    }
+  } else { // in Rhino or a web browser
+    root.punycode = punycode;
+  }
 
 }(this));
 
@@ -7178,6 +6979,10 @@ exports.decode = exports.parse = _dereq_('./decode');
 exports.encode = exports.stringify = _dereq_('./encode');
 
 },{"./decode":10,"./encode":11}],13:[function(_dereq_,module,exports){
+/*jshint strict:true node:true es5:true onevar:true laxcomma:true laxbreak:true eqeqeq:true immed:true latedef:true*/
+(function () {
+  "use strict";
+
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -7206,23 +7011,6 @@ exports.resolve = urlResolve;
 exports.resolveObject = urlResolveObject;
 exports.format = urlFormat;
 
-exports.Url = Url;
-
-function Url() {
-  this.protocol = null;
-  this.slashes = null;
-  this.auth = null;
-  this.host = null;
-  this.port = null;
-  this.hostname = null;
-  this.hash = null;
-  this.search = null;
-  this.query = null;
-  this.pathname = null;
-  this.path = null;
-  this.href = null;
-}
-
 // Reference: RFC 3986, RFC 1808, RFC 2396
 
 // define these here so at least they only have to be
@@ -7235,19 +7023,20 @@ var protocolPattern = /^([a-z0-9.+-]+:)/i,
     delims = ['<', '>', '"', '`', ' ', '\r', '\n', '\t'],
 
     // RFC 2396: characters not allowed for various reasons.
-    unwise = ['{', '}', '|', '\\', '^', '`'].concat(delims),
+    unwise = ['{', '}', '|', '\\', '^', '~', '`'].concat(delims),
 
     // Allowed by RFCs, but cause of XSS attacks.  Always escape these.
-    autoEscape = ['\''].concat(unwise),
+    autoEscape = ['\''].concat(delims),
     // Characters that are never ever allowed in a hostname.
     // Note that any invalid chars are also handled, but these
     // are the ones that are *expected* to be seen, so we fast-path
     // them.
-    nonHostChars = ['%', '/', '?', ';', '#'].concat(autoEscape),
-    hostEndingChars = ['/', '?', '#'],
+    nonHostChars = ['%', '/', '?', ';', '#']
+      .concat(unwise).concat(autoEscape),
+    nonAuthChars = ['/', '@', '?', '#'].concat(delims),
     hostnameMaxLen = 255,
-    hostnamePartPattern = /^[a-z0-9A-Z_-]{0,63}$/,
-    hostnamePartStart = /^([a-z0-9A-Z_-]{0,63})(.*)$/,
+    hostnamePartPattern = /^[a-zA-Z0-9][a-z0-9A-Z_-]{0,62}$/,
+    hostnamePartStart = /^([a-zA-Z0-9][a-z0-9A-Z_-]{0,62})(.*)$/,
     // protocols that can allow "unsafe" and "unwise" chars.
     unsafeProtocol = {
       'javascript': true,
@@ -7257,6 +7046,18 @@ var protocolPattern = /^([a-z0-9.+-]+:)/i,
     hostlessProtocol = {
       'javascript': true,
       'javascript:': true
+    },
+    // protocols that always have a path component.
+    pathedProtocol = {
+      'http': true,
+      'https': true,
+      'ftp': true,
+      'gopher': true,
+      'file': true,
+      'http:': true,
+      'ftp:': true,
+      'gopher:': true,
+      'file:': true
     },
     // protocols that always contain a // bit.
     slashedProtocol = {
@@ -7274,19 +7075,14 @@ var protocolPattern = /^([a-z0-9.+-]+:)/i,
     querystring = _dereq_('querystring');
 
 function urlParse(url, parseQueryString, slashesDenoteHost) {
-  if (url && isObject(url) && url instanceof Url) return url;
+  if (url && typeof(url) === 'object' && url.href) return url;
 
-  var u = new Url;
-  u.parse(url, parseQueryString, slashesDenoteHost);
-  return u;
-}
-
-Url.prototype.parse = function(url, parseQueryString, slashesDenoteHost) {
-  if (!isString(url)) {
+  if (typeof url !== 'string') {
     throw new TypeError("Parameter 'url' must be a string, not " + typeof url);
   }
 
-  var rest = url;
+  var out = {},
+      rest = url;
 
   // trim before proceeding.
   // This is to support parse stuff like "  http://foo.com  \n"
@@ -7296,7 +7092,7 @@ Url.prototype.parse = function(url, parseQueryString, slashesDenoteHost) {
   if (proto) {
     proto = proto[0];
     var lowerProto = proto.toLowerCase();
-    this.protocol = lowerProto;
+    out.protocol = lowerProto;
     rest = rest.substr(proto.length);
   }
 
@@ -7308,85 +7104,78 @@ Url.prototype.parse = function(url, parseQueryString, slashesDenoteHost) {
     var slashes = rest.substr(0, 2) === '//';
     if (slashes && !(proto && hostlessProtocol[proto])) {
       rest = rest.substr(2);
-      this.slashes = true;
+      out.slashes = true;
     }
   }
 
   if (!hostlessProtocol[proto] &&
       (slashes || (proto && !slashedProtocol[proto]))) {
-
     // there's a hostname.
     // the first instance of /, ?, ;, or # ends the host.
-    //
+    // don't enforce full RFC correctness, just be unstupid about it.
+
     // If there is an @ in the hostname, then non-host chars *are* allowed
-    // to the left of the last @ sign, unless some host-ending character
+    // to the left of the first @ sign, unless some non-auth character
     // comes *before* the @-sign.
     // URLs are obnoxious.
-    //
-    // ex:
-    // http://a@b@c/ => user:a@b host:c
-    // http://a@b?@c => user:a host:c path:/?@c
-
-    // v0.12 TODO(isaacs): This is not quite how Chrome does things.
-    // Review our test case against browsers more comprehensively.
-
-    // find the first instance of any hostEndingChars
-    var hostEnd = -1;
-    for (var i = 0; i < hostEndingChars.length; i++) {
-      var hec = rest.indexOf(hostEndingChars[i]);
-      if (hec !== -1 && (hostEnd === -1 || hec < hostEnd))
-        hostEnd = hec;
-    }
-
-    // at this point, either we have an explicit point where the
-    // auth portion cannot go past, or the last @ char is the decider.
-    var auth, atSign;
-    if (hostEnd === -1) {
-      // atSign can be anywhere.
-      atSign = rest.lastIndexOf('@');
-    } else {
-      // atSign must be in auth portion.
-      // http://a@b/c@d => host:b auth:a path:/c@d
-      atSign = rest.lastIndexOf('@', hostEnd);
-    }
-
-    // Now we have a portion which is definitely the auth.
-    // Pull that off.
+    var atSign = rest.indexOf('@');
     if (atSign !== -1) {
-      auth = rest.slice(0, atSign);
-      rest = rest.slice(atSign + 1);
-      this.auth = decodeURIComponent(auth);
+      var auth = rest.slice(0, atSign);
+
+      // there *may be* an auth
+      var hasAuth = true;
+      for (var i = 0, l = nonAuthChars.length; i < l; i++) {
+        if (auth.indexOf(nonAuthChars[i]) !== -1) {
+          // not a valid auth.  Something like http://foo.com/bar@baz/
+          hasAuth = false;
+          break;
+        }
+      }
+
+      if (hasAuth) {
+        // pluck off the auth portion.
+        out.auth = decodeURIComponent(auth);
+        rest = rest.substr(atSign + 1);
+      }
     }
 
-    // the host is the remaining to the left of the first non-host char
-    hostEnd = -1;
-    for (var i = 0; i < nonHostChars.length; i++) {
-      var hec = rest.indexOf(nonHostChars[i]);
-      if (hec !== -1 && (hostEnd === -1 || hec < hostEnd))
-        hostEnd = hec;
+    var firstNonHost = -1;
+    for (var i = 0, l = nonHostChars.length; i < l; i++) {
+      var index = rest.indexOf(nonHostChars[i]);
+      if (index !== -1 &&
+          (firstNonHost < 0 || index < firstNonHost)) firstNonHost = index;
     }
-    // if we still have not hit it, then the entire thing is a host.
-    if (hostEnd === -1)
-      hostEnd = rest.length;
 
-    this.host = rest.slice(0, hostEnd);
-    rest = rest.slice(hostEnd);
+    if (firstNonHost !== -1) {
+      out.host = rest.substr(0, firstNonHost);
+      rest = rest.substr(firstNonHost);
+    } else {
+      out.host = rest;
+      rest = '';
+    }
 
     // pull out port.
-    this.parseHost();
+    var p = parseHost(out.host);
+    var keys = Object.keys(p);
+    for (var i = 0, l = keys.length; i < l; i++) {
+      var key = keys[i];
+      out[key] = p[key];
+    }
 
     // we've indicated that there is a hostname,
     // so even if it's empty, it has to be present.
-    this.hostname = this.hostname || '';
+    out.hostname = out.hostname || '';
 
     // if hostname begins with [ and ends with ]
     // assume that it's an IPv6 address.
-    var ipv6Hostname = this.hostname[0] === '[' &&
-        this.hostname[this.hostname.length - 1] === ']';
+    var ipv6Hostname = out.hostname[0] === '[' &&
+        out.hostname[out.hostname.length - 1] === ']';
 
     // validate a little.
-    if (!ipv6Hostname) {
-      var hostparts = this.hostname.split(/\./);
+    if (out.hostname.length > hostnameMaxLen) {
+      out.hostname = '';
+    } else if (!ipv6Hostname) {
+      var hostparts = out.hostname.split(/\./);
       for (var i = 0, l = hostparts.length; i < l; i++) {
         var part = hostparts[i];
         if (!part) continue;
@@ -7414,44 +7203,38 @@ Url.prototype.parse = function(url, parseQueryString, slashesDenoteHost) {
             if (notHost.length) {
               rest = '/' + notHost.join('.') + rest;
             }
-            this.hostname = validParts.join('.');
+            out.hostname = validParts.join('.');
             break;
           }
         }
       }
     }
 
-    if (this.hostname.length > hostnameMaxLen) {
-      this.hostname = '';
-    } else {
-      // hostnames are always lower case.
-      this.hostname = this.hostname.toLowerCase();
-    }
+    // hostnames are always lower case.
+    out.hostname = out.hostname.toLowerCase();
 
     if (!ipv6Hostname) {
       // IDNA Support: Returns a puny coded representation of "domain".
       // It only converts the part of the domain name that
       // has non ASCII characters. I.e. it dosent matter if
       // you call it with a domain that already is in ASCII.
-      var domainArray = this.hostname.split('.');
+      var domainArray = out.hostname.split('.');
       var newOut = [];
       for (var i = 0; i < domainArray.length; ++i) {
         var s = domainArray[i];
         newOut.push(s.match(/[^A-Za-z0-9_-]/) ?
             'xn--' + punycode.encode(s) : s);
       }
-      this.hostname = newOut.join('.');
+      out.hostname = newOut.join('.');
     }
 
-    var p = this.port ? ':' + this.port : '';
-    var h = this.hostname || '';
-    this.host = h + p;
-    this.href += this.host;
+    out.host = (out.hostname || '') +
+        ((out.port) ? ':' + out.port : '');
+    out.href += out.host;
 
     // strip [ and ] from the hostname
-    // the host field still retains them, though
     if (ipv6Hostname) {
-      this.hostname = this.hostname.substr(1, this.hostname.length - 2);
+      out.hostname = out.hostname.substr(1, out.hostname.length - 2);
       if (rest[0] !== '/') {
         rest = '/' + rest;
       }
@@ -7480,39 +7263,38 @@ Url.prototype.parse = function(url, parseQueryString, slashesDenoteHost) {
   var hash = rest.indexOf('#');
   if (hash !== -1) {
     // got a fragment string.
-    this.hash = rest.substr(hash);
+    out.hash = rest.substr(hash);
     rest = rest.slice(0, hash);
   }
   var qm = rest.indexOf('?');
   if (qm !== -1) {
-    this.search = rest.substr(qm);
-    this.query = rest.substr(qm + 1);
+    out.search = rest.substr(qm);
+    out.query = rest.substr(qm + 1);
     if (parseQueryString) {
-      this.query = querystring.parse(this.query);
+      out.query = querystring.parse(out.query);
     }
     rest = rest.slice(0, qm);
   } else if (parseQueryString) {
     // no query string, but parseQueryString still requested
-    this.search = '';
-    this.query = {};
+    out.search = '';
+    out.query = {};
   }
-  if (rest) this.pathname = rest;
-  if (slashedProtocol[lowerProto] &&
-      this.hostname && !this.pathname) {
-    this.pathname = '/';
+  if (rest) out.pathname = rest;
+  if (slashedProtocol[proto] &&
+      out.hostname && !out.pathname) {
+    out.pathname = '/';
   }
 
   //to support http.request
-  if (this.pathname || this.search) {
-    var p = this.pathname || '';
-    var s = this.search || '';
-    this.path = p + s;
+  if (out.pathname || out.search) {
+    out.path = (out.pathname ? out.pathname : '') +
+               (out.search ? out.search : '');
   }
 
   // finally, reconstruct the href based on what has been validated.
-  this.href = this.format();
-  return this;
-};
+  out.href = urlFormat(out);
+  return out;
+}
 
 // format a parsed object into a url string
 function urlFormat(obj) {
@@ -7520,49 +7302,44 @@ function urlFormat(obj) {
   // If it's an obj, this is a no-op.
   // this way, you can call url_format() on strings
   // to clean up potentially wonky urls.
-  if (isString(obj)) obj = urlParse(obj);
-  if (!(obj instanceof Url)) return Url.prototype.format.call(obj);
-  return obj.format();
-}
+  if (typeof(obj) === 'string') obj = urlParse(obj);
 
-Url.prototype.format = function() {
-  var auth = this.auth || '';
+  var auth = obj.auth || '';
   if (auth) {
     auth = encodeURIComponent(auth);
     auth = auth.replace(/%3A/i, ':');
     auth += '@';
   }
 
-  var protocol = this.protocol || '',
-      pathname = this.pathname || '',
-      hash = this.hash || '',
+  var protocol = obj.protocol || '',
+      pathname = obj.pathname || '',
+      hash = obj.hash || '',
       host = false,
       query = '';
 
-  if (this.host) {
-    host = auth + this.host;
-  } else if (this.hostname) {
-    host = auth + (this.hostname.indexOf(':') === -1 ?
-        this.hostname :
-        '[' + this.hostname + ']');
-    if (this.port) {
-      host += ':' + this.port;
+  if (obj.host !== undefined) {
+    host = auth + obj.host;
+  } else if (obj.hostname !== undefined) {
+    host = auth + (obj.hostname.indexOf(':') === -1 ?
+        obj.hostname :
+        '[' + obj.hostname + ']');
+    if (obj.port) {
+      host += ':' + obj.port;
     }
   }
 
-  if (this.query &&
-      isObject(this.query) &&
-      Object.keys(this.query).length) {
-    query = querystring.stringify(this.query);
+  if (obj.query && typeof obj.query === 'object' &&
+      Object.keys(obj.query).length) {
+    query = querystring.stringify(obj.query);
   }
 
-  var search = this.search || (query && ('?' + query)) || '';
+  var search = obj.search || (query && ('?' + query)) || '';
 
   if (protocol && protocol.substr(-1) !== ':') protocol += ':';
 
   // only the slashedProtocols get the //.  Not mailto:, xmpp:, etc.
   // unless they had them to begin with.
-  if (this.slashes ||
+  if (obj.slashes ||
       (!protocol || slashedProtocol[protocol]) && host !== false) {
     host = '//' + (host || '');
     if (pathname && pathname.charAt(0) !== '/') pathname = '/' + pathname;
@@ -7573,68 +7350,40 @@ Url.prototype.format = function() {
   if (hash && hash.charAt(0) !== '#') hash = '#' + hash;
   if (search && search.charAt(0) !== '?') search = '?' + search;
 
-  pathname = pathname.replace(/[?#]/g, function(match) {
-    return encodeURIComponent(match);
-  });
-  search = search.replace('#', '%23');
-
   return protocol + host + pathname + search + hash;
-};
-
-function urlResolve(source, relative) {
-  return urlParse(source, false, true).resolve(relative);
 }
 
-Url.prototype.resolve = function(relative) {
-  return this.resolveObject(urlParse(relative, false, true)).format();
-};
+function urlResolve(source, relative) {
+  return urlFormat(urlResolveObject(source, relative));
+}
 
 function urlResolveObject(source, relative) {
   if (!source) return relative;
-  return urlParse(source, false, true).resolveObject(relative);
-}
 
-Url.prototype.resolveObject = function(relative) {
-  if (isString(relative)) {
-    var rel = new Url();
-    rel.parse(relative, false, true);
-    relative = rel;
-  }
-
-  var result = new Url();
-  Object.keys(this).forEach(function(k) {
-    result[k] = this[k];
-  }, this);
+  source = urlParse(urlFormat(source), false, true);
+  relative = urlParse(urlFormat(relative), false, true);
 
   // hash is always overridden, no matter what.
-  // even href="" will remove it.
-  result.hash = relative.hash;
+  source.hash = relative.hash;
 
-  // if the relative url is empty, then there's nothing left to do here.
   if (relative.href === '') {
-    result.href = result.format();
-    return result;
+    source.href = urlFormat(source);
+    return source;
   }
 
   // hrefs like //foo/bar always cut to the protocol.
   if (relative.slashes && !relative.protocol) {
-    // take everything except the protocol from relative
-    Object.keys(relative).forEach(function(k) {
-      if (k !== 'protocol')
-        result[k] = relative[k];
-    });
-
+    relative.protocol = source.protocol;
     //urlParse appends trailing / to urls like http://www.example.com
-    if (slashedProtocol[result.protocol] &&
-        result.hostname && !result.pathname) {
-      result.path = result.pathname = '/';
+    if (slashedProtocol[relative.protocol] &&
+        relative.hostname && !relative.pathname) {
+      relative.path = relative.pathname = '/';
     }
-
-    result.href = result.format();
-    return result;
+    relative.href = urlFormat(relative);
+    return relative;
   }
 
-  if (relative.protocol && relative.protocol !== result.protocol) {
+  if (relative.protocol && relative.protocol !== source.protocol) {
     // if it's a known url protocol, then changing
     // the protocol does weird things
     // first, if it's not file:, then we MUST have a host,
@@ -7644,14 +7393,10 @@ Url.prototype.resolveObject = function(relative) {
     // because that's known to be hostless.
     // anything else is assumed to be absolute.
     if (!slashedProtocol[relative.protocol]) {
-      Object.keys(relative).forEach(function(k) {
-        result[k] = relative[k];
-      });
-      result.href = result.format();
-      return result;
+      relative.href = urlFormat(relative);
+      return relative;
     }
-
-    result.protocol = relative.protocol;
+    source.protocol = relative.protocol;
     if (!relative.host && !hostlessProtocol[relative.protocol]) {
       var relPath = (relative.pathname || '').split('/');
       while (relPath.length && !(relative.host = relPath.shift()));
@@ -7659,72 +7404,72 @@ Url.prototype.resolveObject = function(relative) {
       if (!relative.hostname) relative.hostname = '';
       if (relPath[0] !== '') relPath.unshift('');
       if (relPath.length < 2) relPath.unshift('');
-      result.pathname = relPath.join('/');
-    } else {
-      result.pathname = relative.pathname;
+      relative.pathname = relPath.join('/');
     }
-    result.search = relative.search;
-    result.query = relative.query;
-    result.host = relative.host || '';
-    result.auth = relative.auth;
-    result.hostname = relative.hostname || relative.host;
-    result.port = relative.port;
-    // to support http.request
-    if (result.pathname || result.search) {
-      var p = result.pathname || '';
-      var s = result.search || '';
-      result.path = p + s;
+    source.pathname = relative.pathname;
+    source.search = relative.search;
+    source.query = relative.query;
+    source.host = relative.host || '';
+    source.auth = relative.auth;
+    source.hostname = relative.hostname || relative.host;
+    source.port = relative.port;
+    //to support http.request
+    if (source.pathname !== undefined || source.search !== undefined) {
+      source.path = (source.pathname ? source.pathname : '') +
+                    (source.search ? source.search : '');
     }
-    result.slashes = result.slashes || relative.slashes;
-    result.href = result.format();
-    return result;
+    source.slashes = source.slashes || relative.slashes;
+    source.href = urlFormat(source);
+    return source;
   }
 
-  var isSourceAbs = (result.pathname && result.pathname.charAt(0) === '/'),
+  var isSourceAbs = (source.pathname && source.pathname.charAt(0) === '/'),
       isRelAbs = (
-          relative.host ||
+          relative.host !== undefined ||
           relative.pathname && relative.pathname.charAt(0) === '/'
       ),
       mustEndAbs = (isRelAbs || isSourceAbs ||
-                    (result.host && relative.pathname)),
+                    (source.host && relative.pathname)),
       removeAllDots = mustEndAbs,
-      srcPath = result.pathname && result.pathname.split('/') || [],
+      srcPath = source.pathname && source.pathname.split('/') || [],
       relPath = relative.pathname && relative.pathname.split('/') || [],
-      psychotic = result.protocol && !slashedProtocol[result.protocol];
+      psychotic = source.protocol &&
+          !slashedProtocol[source.protocol];
 
   // if the url is a non-slashed url, then relative
   // links like ../.. should be able
   // to crawl up to the hostname, as well.  This is strange.
-  // result.protocol has already been set by now.
+  // source.protocol has already been set by now.
   // Later on, put the first path part into the host field.
   if (psychotic) {
-    result.hostname = '';
-    result.port = null;
-    if (result.host) {
-      if (srcPath[0] === '') srcPath[0] = result.host;
-      else srcPath.unshift(result.host);
+
+    delete source.hostname;
+    delete source.port;
+    if (source.host) {
+      if (srcPath[0] === '') srcPath[0] = source.host;
+      else srcPath.unshift(source.host);
     }
-    result.host = '';
+    delete source.host;
     if (relative.protocol) {
-      relative.hostname = null;
-      relative.port = null;
+      delete relative.hostname;
+      delete relative.port;
       if (relative.host) {
         if (relPath[0] === '') relPath[0] = relative.host;
         else relPath.unshift(relative.host);
       }
-      relative.host = null;
+      delete relative.host;
     }
     mustEndAbs = mustEndAbs && (relPath[0] === '' || srcPath[0] === '');
   }
 
   if (isRelAbs) {
     // it's absolute.
-    result.host = (relative.host || relative.host === '') ?
-                  relative.host : result.host;
-    result.hostname = (relative.hostname || relative.hostname === '') ?
-                      relative.hostname : result.hostname;
-    result.search = relative.search;
-    result.query = relative.query;
+    source.host = (relative.host || relative.host === '') ?
+                      relative.host : source.host;
+    source.hostname = (relative.hostname || relative.hostname === '') ?
+                      relative.hostname : source.hostname;
+    source.search = relative.search;
+    source.query = relative.query;
     srcPath = relPath;
     // fall through to the dot-handling below.
   } else if (relPath.length) {
@@ -7733,55 +7478,53 @@ Url.prototype.resolveObject = function(relative) {
     if (!srcPath) srcPath = [];
     srcPath.pop();
     srcPath = srcPath.concat(relPath);
-    result.search = relative.search;
-    result.query = relative.query;
-  } else if (!isNullOrUndefined(relative.search)) {
+    source.search = relative.search;
+    source.query = relative.query;
+  } else if ('search' in relative) {
     // just pull out the search.
     // like href='?foo'.
     // Put this after the other two cases because it simplifies the booleans
     if (psychotic) {
-      result.hostname = result.host = srcPath.shift();
+      source.hostname = source.host = srcPath.shift();
       //occationaly the auth can get stuck only in host
       //this especialy happens in cases like
       //url.resolveObject('mailto:local1@domain1', 'local2@domain2')
-      var authInHost = result.host && result.host.indexOf('@') > 0 ?
-                       result.host.split('@') : false;
+      var authInHost = source.host && source.host.indexOf('@') > 0 ?
+                       source.host.split('@') : false;
       if (authInHost) {
-        result.auth = authInHost.shift();
-        result.host = result.hostname = authInHost.shift();
+        source.auth = authInHost.shift();
+        source.host = source.hostname = authInHost.shift();
       }
     }
-    result.search = relative.search;
-    result.query = relative.query;
+    source.search = relative.search;
+    source.query = relative.query;
     //to support http.request
-    if (!isNull(result.pathname) || !isNull(result.search)) {
-      result.path = (result.pathname ? result.pathname : '') +
-                    (result.search ? result.search : '');
+    if (source.pathname !== undefined || source.search !== undefined) {
+      source.path = (source.pathname ? source.pathname : '') +
+                    (source.search ? source.search : '');
     }
-    result.href = result.format();
-    return result;
+    source.href = urlFormat(source);
+    return source;
   }
-
   if (!srcPath.length) {
     // no path at all.  easy.
     // we've already handled the other stuff above.
-    result.pathname = null;
+    delete source.pathname;
     //to support http.request
-    if (result.search) {
-      result.path = '/' + result.search;
+    if (!source.search) {
+      source.path = '/' + source.search;
     } else {
-      result.path = null;
+      delete source.path;
     }
-    result.href = result.format();
-    return result;
+    source.href = urlFormat(source);
+    return source;
   }
-
   // if a url ENDs in . or .., then it must get a trailing slash.
   // however, if it ends in anything else non-slashy,
   // then it must NOT get a trailing slash.
   var last = srcPath.slice(-1)[0];
   var hasTrailingSlash = (
-      (result.host || relative.host) && (last === '.' || last === '..') ||
+      (source.host || relative.host) && (last === '.' || last === '..') ||
       last === '');
 
   // strip single dots, resolve double dots to parent dir
@@ -7821,70 +7564,52 @@ Url.prototype.resolveObject = function(relative) {
 
   // put the host back
   if (psychotic) {
-    result.hostname = result.host = isAbsolute ? '' :
+    source.hostname = source.host = isAbsolute ? '' :
                                     srcPath.length ? srcPath.shift() : '';
     //occationaly the auth can get stuck only in host
     //this especialy happens in cases like
     //url.resolveObject('mailto:local1@domain1', 'local2@domain2')
-    var authInHost = result.host && result.host.indexOf('@') > 0 ?
-                     result.host.split('@') : false;
+    var authInHost = source.host && source.host.indexOf('@') > 0 ?
+                     source.host.split('@') : false;
     if (authInHost) {
-      result.auth = authInHost.shift();
-      result.host = result.hostname = authInHost.shift();
+      source.auth = authInHost.shift();
+      source.host = source.hostname = authInHost.shift();
     }
   }
 
-  mustEndAbs = mustEndAbs || (result.host && srcPath.length);
+  mustEndAbs = mustEndAbs || (source.host && srcPath.length);
 
   if (mustEndAbs && !isAbsolute) {
     srcPath.unshift('');
   }
 
-  if (!srcPath.length) {
-    result.pathname = null;
-    result.path = null;
-  } else {
-    result.pathname = srcPath.join('/');
-  }
-
+  source.pathname = srcPath.join('/');
   //to support request.http
-  if (!isNull(result.pathname) || !isNull(result.search)) {
-    result.path = (result.pathname ? result.pathname : '') +
-                  (result.search ? result.search : '');
+  if (source.pathname !== undefined || source.search !== undefined) {
+    source.path = (source.pathname ? source.pathname : '') +
+                  (source.search ? source.search : '');
   }
-  result.auth = relative.auth || result.auth;
-  result.slashes = result.slashes || relative.slashes;
-  result.href = result.format();
-  return result;
-};
+  source.auth = relative.auth || source.auth;
+  source.slashes = source.slashes || relative.slashes;
+  source.href = urlFormat(source);
+  return source;
+}
 
-Url.prototype.parseHost = function() {
-  var host = this.host;
+function parseHost(host) {
+  var out = {};
   var port = portPattern.exec(host);
   if (port) {
     port = port[0];
     if (port !== ':') {
-      this.port = port.substr(1);
+      out.port = port.substr(1);
     }
     host = host.substr(0, host.length - port.length);
   }
-  if (host) this.hostname = host;
-};
-
-function isString(arg) {
-  return typeof arg === "string";
+  if (host) out.hostname = host;
+  return out;
 }
 
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-
-function isNull(arg) {
-  return arg === null;
-}
-function isNullOrUndefined(arg) {
-  return  arg == null;
-}
+}());
 
 },{"punycode":9,"querystring":12}],14:[function(_dereq_,module,exports){
 module.exports = function isBuffer(arg) {
@@ -8482,8 +8207,8 @@ function hasOwnProperty(obj, prop) {
   return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
-}).call(this,_dereq_("FWaASH"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":14,"FWaASH":8,"inherits":7}],16:[function(_dereq_,module,exports){
+}).call(this,_dereq_("C:\\Users\\ErikJan\\Documents\\Visual Studio 2013\\Projects\\fh-js-sdk\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js"),typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"./support/isBuffer":14,"C:\\Users\\ErikJan\\Documents\\Visual Studio 2013\\Projects\\fh-js-sdk\\node_modules\\browserify\\node_modules\\insert-module-globals\\node_modules\\process\\browser.js":8,"inherits":7}],16:[function(_dereq_,module,exports){
 /*
  * loglevel - https://github.com/pimterry/loglevel
  *
@@ -10077,30 +9802,26 @@ var fhparams = _dereq_("./modules/fhparams");
 var appProps = _dereq_("./modules/appProps");
 var device = _dereq_("./modules/device");
 
-var defaultFail = function(msg, error) {
+var defaultFail = function(msg, error){
   logger.error(msg + ":" + JSON.stringify(error));
 };
 
-var addListener = function(type, listener) {
+var addListener = function(type, listener){
   events.addListener(type, listener);
-  if (type === constants.INIT_EVENT) {
+  if(type === constants.INIT_EVENT){
     //for fhinit event, need to check the status of cloud and may need to fire the listener immediately.
-    if (cloud.isReady()) {
-      listener(null, {
-        host: cloud.getCloudHostUrl()
-      });
-    } else if (cloud.getInitError()) {
+    if(cloud.isReady()){
+      listener(null, {host: cloud.getCloudHostUrl()});
+    } else if(cloud.getInitError()){
       listener(cloud.getInitError());
     }
   }
 };
 
-var once = function(type, listener) {
-  if (type === constants.INIT_EVENT && cloud.isReady()) {
-    listener(null, {
-      host: cloud.getCloudHostUrl()
-    });
-  } else if (type === constants.INIT_EVENT && cloud.getInitError()) {
+var once = function(type, listener){
+  if(type === constants.INIT_EVENT && cloud.isReady()){
+    listener(null, {host: cloud.getCloudHostUrl()});
+  } else if(type === constants.INIT_EVENT && cloud.getInitError()){
     listener(cloud.getInitError());
   } else {
     events.once(type, listener);
@@ -10108,15 +9829,15 @@ var once = function(type, listener) {
 };
 
 //Legacy shim. Init hapens based on fhconfig.json or, for v2, global var called fh_app_props which is injected as part of the index.html wrapper
-var init = function(opts, success, fail) {
+var init = function(opts, success, fail){
   logger.warn("$fh.init will be deprecated soon");
-  cloud.ready(function(err, host) {
-    if (err) {
-      if (typeof fail === "function") {
+  cloud.ready(function(err, host){
+    if(err){
+      if(typeof fail === "function"){
         return fail(err);
       }
     } else {
-      if (typeof success === "function") {
+      if(typeof success === "function"){
         success(host.host);
       }
     }
@@ -10137,16 +9858,12 @@ fh.mbaas = api_mbaas;
 fh._getDeviceId = device.getDeviceId;
 fh.fh_timeout = 60000; //keep backward compatible
 
-fh.getCloudURL = function() {
+fh.getCloudURL = function(){
   return cloud.getCloudHostUrl();
 };
 
-fh.getFHParams = function() {
+fh.getFHParams = function(){
   return fhparams.buildFHParams();
-};
-
-fh.getFHHeaders = function() {
-  return fhparams.getFHHeaders();
 };
 
 //events
@@ -10154,28 +9871,24 @@ fh.addListener = addListener;
 fh.on = addListener;
 fh.once = once;
 var methods = ["removeListener", "removeAllListeners", "setMaxListeners", "listeners", "emit"];
-for (var i = 0; i < methods.length; i++) {
+for(var i=0;i<methods.length;i++){
   fh[methods[i]] = events[methods[i]];
 }
 
 //keep backward compatibility
-fh.on(constants.INIT_EVENT, function(err, host) {
-  if (err) {
+fh.on(constants.INIT_EVENT, function(err, host){
+  if(err){
     fh.cloud_props = {};
     fh.app_props = {};
   } else {
-    fh.cloud_props = {
-      hosts: {
-        url: host.host
-      }
-    };
+    fh.cloud_props = {hosts: {url: host.host}};
     fh.app_props = appProps.getAppProps();
   }
 });
 
 //keep backward compatibility
-fh.on(constants.INTERNAL_CONFIG_LOADED_EVENT, function(err, host) {
-  if (err) {
+fh.on(constants.INTERNAL_CONFIG_LOADED_EVENT, function(err, host){
+  if(err){
     fh.app_props = {};
   } else {
     fh.app_props = appProps.getAppProps();
@@ -10192,6 +9905,12 @@ fh.reset = cloud.reset;
 //So, we assign $fh to the window name space directly here. (otherwise, we have to fork the grunt browserify plugin, then fork browerify and the dependent umd module, really not worthing the effort).
 window.$fh = fh;
 module.exports = fh;
+
+
+
+
+
+
 },{"./modules/ajax":21,"./modules/api_act":22,"./modules/api_auth":23,"./modules/api_cloud":24,"./modules/api_hash":25,"./modules/api_mbaas":26,"./modules/api_push":27,"./modules/api_sec":28,"./modules/appProps":29,"./modules/constants":31,"./modules/device":34,"./modules/events":35,"./modules/fhparams":36,"./modules/logger":42,"./modules/sync-cli":50,"./modules/waitForCloud":52}],20:[function(_dereq_,module,exports){
 var urlparser = _dereq_('url');
 
@@ -10673,24 +10392,19 @@ var fhparams = _dereq_("./fhparams");
 var ajax = _dereq_("./ajax");
 var handleError = _dereq_("./handleError");
 var appProps = _dereq_("./appProps");
-var _ = _dereq_('underscore');
 
 function doActCall(opts, success, fail){
   var cloud_host = cloud.getCloudHost();
   var url = cloud_host.getActUrl(opts.act);
   var params = opts.req || {};
   params = fhparams.addFHParams(params);
-  var headers = fhparams.getFHHeaders();
-  if (opts.headers) {
-    headers = _.extend(headers, opts.headers);
-  }
   return ajax({
     "url": url,
     "tryJSONP": typeof Titanium === 'undefined',
     "type": "POST",
     "dataType": "json",
     "data": JSON.stringify(params),
-    "headers": headers,
+    "headers": fhparams.getFHHeaders(),
     "contentType": "application/json",
     "timeout": opts.timeout || appProps.timeout,
     "success": success,
@@ -10721,7 +10435,7 @@ module.exports = function(opts, success, fail){
     }
   });
 };
-},{"./ajax":21,"./appProps":29,"./fhparams":36,"./handleError":37,"./logger":42,"./waitForCloud":52,"underscore":18}],23:[function(_dereq_,module,exports){
+},{"./ajax":21,"./appProps":29,"./fhparams":36,"./handleError":37,"./logger":42,"./waitForCloud":52}],23:[function(_dereq_,module,exports){
 var logger = _dereq_("./logger");
 var cloud = _dereq_("./waitForCloud");
 var fhparams = _dereq_("./fhparams");
@@ -10738,7 +10452,7 @@ function callAuthEndpoint(endpoint, data, opts, success, fail){
   var path = app_props.host + constants.boxprefix + "admin/authpolicy/" + endpoint;
 
   if (app_props.local) {
-    path = cloud.getCloudHostUrl() + constants.boxprefix + "admin/authpolicy/" + endpoint;
+    path = constants.boxprefix + "admin/authpolicy/" + endpoint;
   }
 
   ajax({
@@ -10856,7 +10570,6 @@ var fhparams = _dereq_("./fhparams");
 var ajax = _dereq_("./ajax");
 var handleError = _dereq_("./handleError");
 var appProps = _dereq_("./appProps");
-var _ = _dereq_('underscore');
 
 function doCloudCall(opts, success, fail){
   var cloud_host = cloud.getCloudHost();
@@ -10865,15 +10578,10 @@ function doCloudCall(opts, success, fail){
   params = fhparams.addFHParams(params);
   var type = opts.method || "POST";
   var data;
-  if (["POST", "PUT", "PATCH", "DELETE"].indexOf(type.toUpperCase()) !== -1) {
+  if ("POST" === type.toUpperCase()) {
     data = JSON.stringify(params);
   } else {
     data = params;
-  }
-
-  var headers = fhparams.getFHHeaders();
-  if (opts.headers) {
-    headers = _.extend(headers, opts.headers);
   }
 
   return ajax({
@@ -10883,7 +10591,7 @@ function doCloudCall(opts, success, fail){
     "data": data,
     "contentType": opts.contentType || "application/json",
     "timeout": opts.timeout || appProps.timeout,
-    "headers": headers,
+    "headers": fhparams.getFHHeaders(),
     "success": success,
     "error": function(req, statusText, error){
       return handleError(fail, req, statusText, error);
@@ -10908,7 +10616,7 @@ module.exports = function(opts, success, fail){
     }
   });
 };
-},{"./ajax":21,"./appProps":29,"./fhparams":36,"./handleError":37,"./logger":42,"./waitForCloud":52,"underscore":18}],25:[function(_dereq_,module,exports){
+},{"./ajax":21,"./appProps":29,"./fhparams":36,"./handleError":37,"./logger":42,"./waitForCloud":52}],25:[function(_dereq_,module,exports){
 var hashImpl = _dereq_("./security/hash");
 
 module.exports = function(p, s, f){
@@ -10968,37 +10676,22 @@ module.exports = function(opts, success, fail){
 },{"./ajax":21,"./appProps":29,"./constants":31,"./fhparams":36,"./handleError":37,"./logger":42,"./waitForCloud":52}],27:[function(_dereq_,module,exports){
 var logger = _dereq_("./logger");
 var appProps = _dereq_("./appProps");
-var cloud = _dereq_("./waitForCloud");
 
-module.exports = function (onNotification, success, fail, config) {
+module.exports = function (onNotification, success, fail) {
+  logger.debug("push is called");
   if (!fail) {
     fail = function (msg, error) {
       logger.debug(msg + ":" + JSON.stringify(error));
     };
   }
 
-  cloud.ready(function(err, cloudHost){
-    logger.debug("push is called");
-    if(err){
-      return fail(err.message, err);
-    } else {
-      if (window.push) {
-        var props = appProps.getAppProps();
-        props.pushServerURL = props.host + '/api/v2/ag-push';
-        if (config) {
-          for(var key in config) {
-            props[key] = config[key];
-          }
-        }
-        window.push.register(onNotification, success, fail, props);
-      } else {
-        fail('push plugin not installed');
-      }
-    }
-  });
+  if (window.push) {
+    window.push.register(onNotification, success, fail, appProps.getAppProps());
+  } else {
+    fail('push plugin not installed');
+  }
 };
-
-},{"./appProps":29,"./logger":42,"./waitForCloud":52}],28:[function(_dereq_,module,exports){
+},{"./appProps":29,"./logger":42}],28:[function(_dereq_,module,exports){
 var keygen = _dereq_("./security/aes-keygen");
 var aes = _dereq_("./security/aes-node");
 var rsa = _dereq_("./security/rsa-node");
@@ -11243,7 +10936,7 @@ module.exports = {
 },{"./data":33,"./fhparams":36,"./logger":42,"./queryMap":44}],31:[function(_dereq_,module,exports){
 module.exports = {
   "boxprefix": "/box/srv/1.1/",
-  "sdk_version": "2.14.4",
+  "sdk_version": "2.6.1",
   "config_js": "fhconfig.json",
   "INIT_EVENT": "fhinit",
   "INTERNAL_CONFIG_LOADED_EVENT": "internalfhconfigloaded",
@@ -12137,19 +11830,14 @@ var decrypt = function(p, s, f){
   var data = CryptoJS.enc.Hex.parse(p.params.ciphertext);
   var encodeData = CryptoJS.enc.Base64.stringify(data);
   var decrypted = CryptoJS.AES.decrypt(encodeData, CryptoJS.enc.Hex.parse(p.params.key), {iv: CryptoJS.enc.Hex.parse(p.params.iv)});
-  
-  try {
-    return s({plaintext:decrypted.toString(CryptoJS.enc.Utf8)});
-  } catch (e) {
-    return f(e);
-  }
+  plain_text = decrypted.toString(CryptoJS.enc.Utf8);
+  return s({plaintext:plain_text});
 };
 
 module.exports = {
   encrypt: encrypt,
   decrypt: decrypt
 };
-
 },{"../../../libs/generated/crypto":1}],48:[function(_dereq_,module,exports){
 var CryptoJS = _dereq_("../../../libs/generated/crypto");
 
@@ -12291,8 +11979,7 @@ var self = {
 
   init_is_called: false,
 
-  //this is used to map the temp data uid (created on client) to the real uid (created in the cloud)
-  uid_map: {},
+  change_history_size: 5,
 
   // PUBLIC FUNCTION IMPLEMENTATIONS
   init: function(options) {
@@ -12411,15 +12098,6 @@ var self = {
     });
   },
 
-  getUID: function(oldOrNewUid){
-    var uid = self.uid_map[oldOrNewUid];
-    if(uid || uid === 0){
-      return uid;
-    } else {
-      return oldOrNewUid;
-    }
-  },
-
   create: function(dataset_id, data, success, failure) {
     if(data == null){
       if(failure){
@@ -12431,7 +12109,6 @@ var self = {
 
   read: function(dataset_id, uid, success, failure) {
     self.getDataSet(dataset_id, function(dataset) {
-      uid = self.getUID(uid);
       var rec = dataset.data[uid];
       if (!rec) {
         failure("unknown_uid");
@@ -12448,12 +12125,10 @@ var self = {
   },
 
   update: function(dataset_id, uid, data, success, failure) {
-    uid = self.getUID(uid);
     self.addPendingObj(dataset_id, uid, data, "update", success, failure);
   },
 
   'delete': function(dataset_id, uid, success, failure) {
-    uid = self.getUID(uid);
     self.addPendingObj(dataset_id, uid, null, "delete", success, failure);
   },
 
@@ -12732,7 +12407,7 @@ var self = {
     });
 
     function storePendingObject(obj) {
-      obj.hash = obj.hash || self.generateHash(obj);
+      obj.hash = self.generateHash(obj);
 
       self.getDataSet(dataset_id, function(dataset) {
 
@@ -12761,10 +12436,7 @@ var self = {
     pendingObj.postHash = self.generateHash(pendingObj.post);
     pendingObj.timestamp = new Date().getTime();
     if( "create" === action ) {
-      //this hash value will be returned later on when the cloud returns updates. We can then link the old uid
-      //with new uid
-      pendingObj.hash = self.generateHash(pendingObj);
-      pendingObj.uid = pendingObj.hash;
+      pendingObj.uid = pendingObj.postHash;
       storePendingObject(pendingObj);
     } else {
       self.read(dataset_id, uid, function(rec) {
@@ -12777,6 +12449,19 @@ var self = {
           failure(code, msg);
         }
       });
+    }
+  },
+
+  updateChangeHistory: function(dataset, pending){
+    if(pending.action === 'update'){
+      dataset.changeHistory = dataset.changeHistory || {};
+      dataset.changeHistory[pending.uid] = dataset.changeHistory[pending.uid] || [];
+      if(dataset.changeHistory[pending.uid].indexOf(pending.preHash) === -1){
+        dataset.changeHistory[pending.uid].push(pending.preHash);
+        if(dataset.changeHistory[pending.uid].length > self.change_history_size){
+          dataset.changeHistory[pending.uid].shift();
+        }
+      }
     }
   },
 
@@ -12808,6 +12493,7 @@ var self = {
             var pending = dataSet.pending;
             var pendingArray = [];
             for(var i in pending ) {
+              self.updateChangeHistory(dataSet, pending[i]);
               // Mark the pending records we are about to submit as inflight and add them to the array for submission
               // Don't re-add previous inFlight pending records who whave crashed - i.e. who's current state is unknown
               // Don't add delayed records
@@ -12834,13 +12520,16 @@ var self = {
                     for (var up in updates) {
                       rec = updates[up];
                       acknowledgements.push(rec);
-                      if( dataSet.pending[up] && dataSet.pending[up].inFlight) {
+                      if( dataSet.pending[up] && dataSet.pending[up].inFlight && !dataSet.pending[up].crashed ) {
                         delete dataSet.pending[up];
                         self.doNotify(dataset_id, rec.uid, notification, rec);
                       }
                     }
                   }
                 }
+
+                // Check to see if any new pending records need to be updated to reflect the current state of play.
+                self.updatePendingFromNewData(dataset_id, dataSet, res);
 
                 // Check to see if any previously crashed inflight records can now be resolved
                 self.updateCrashedInFlightFromNewData(dataset_id, dataSet, res);
@@ -12851,17 +12540,31 @@ var self = {
                 //Check meta data as well to make sure it contains the correct info
                 self.updateMetaFromNewData(dataset_id, dataSet, res);
 
+                // Update the new dataset with details of any inflight updates which we have not received a response on
+                self.updateNewDataFromInFlight(dataset_id, dataSet, res);
+
+                // Update the new dataset with details of any pending updates
+                self.updateNewDataFromPending(dataset_id, dataSet, res);
+
+
+
+                if (res.records) {
+                  // Full Dataset returned
+                  dataSet.data = res.records;
+                  dataSet.hash = res.hash;
+
+                  self.doNotify(dataset_id, res.hash, self.notifications.DELTA_RECEIVED, 'full dataset');
+                }
 
                 if (res.updates) {
                   var acknowledgements = [];
-                  self.checkUidChanges(dataSet, res.updates.applied);
                   processUpdates(res.updates.applied, self.notifications.REMOTE_UPDATE_APPLIED, acknowledgements);
                   processUpdates(res.updates.failed, self.notifications.REMOTE_UPDATE_FAILED, acknowledgements);
                   processUpdates(res.updates.collisions, self.notifications.COLLISION_DETECTED, acknowledgements);
                   dataSet.acknowledgements = acknowledgements;
                 }
 
-                if (res.hash && res.hash !== dataSet.hash) {
+                if (!res.records && res.hash && res.hash !== dataSet.hash) {
                   self.consoleLog("Local dataset stale - syncing records :: local hash= " + dataSet.hash + " - remoteHash=" + res.hash);
                   // Different hash value returned - Sync individual records
                   self.syncRecords(dataset_id);
@@ -12914,10 +12617,6 @@ var self = {
         'dataset_id': dataset_id,
         'req': syncRecParams
       }, function(res) {
-        self.consoleLog('syncRecords Res before applying pending changes :: ' + JSON.stringify(res));
-        self.applyPendingChangesToRecords(dataSet, res);
-        self.consoleLog('syncRecords Res after apply pending changes :: ' + JSON.stringify(res));
-
         var i;
 
         if (res.create) {
@@ -12926,12 +12625,17 @@ var self = {
             self.doNotify(dataset_id, i, self.notifications.RECORD_DELTA_RECEIVED, "create");
           }
         }
-        
+        var existingPendingPreHashes = self.existingPendingPreHashMap(dataSet);
         if (res.update) {
           for (i in res.update) {
-            localDataSet[i].hash = res.update[i].hash;
-            localDataSet[i].data = res.update[i].data;
-            self.doNotify(dataset_id, i, self.notifications.RECORD_DELTA_RECEIVED, "update");
+            if(existingPendingPreHashes[i] && existingPendingPreHashes[i].indexOf(res.update[i].hash) > -1){
+              //the returned update data has been updated locally, so it should keep local copy
+              self.consoleLog("skip update from remote for uid :: " + i + " :: hash = " + res.update[i].hash + ' :: data = ' + JSON.stringify(res.update[i].data));
+            } else {
+              localDataSet[i].hash = res.update[i].hash;
+              localDataSet[i].data = res.update[i].data;
+              self.doNotify(dataset_id, i, self.notifications.RECORD_DELTA_RECEIVED, "update");
+            }
           }
         }
         if (res['delete']) {
@@ -12965,83 +12669,9 @@ var self = {
     });
   },
 
-  applyPendingChangesToRecords: function(dataset, records){
-    var pendings = dataset.pending;
-    for(var pendingUid in pendings){
-      if(pendings.hasOwnProperty(pendingUid)){
-        var pendingObj = pendings[pendingUid];
-        var uid = pendingObj.uid;
-        //if the records contain any thing about the data records that are currently in pendings,
-        //it means there are local changes that haven't been applied to the cloud yet,
-        //so update the pre value of each pending record to relect the latest status from cloud
-        //and remove them from the response
-        if(records.create){
-          var creates = records.create;
-          if(creates && creates[uid]){
-            delete creates[uid];
-          }
-        }
-        if(records.update){
-          var updates = records.update;
-          if(updates && updates[uid]){
-            delete updates[uid];
-          }
-        }
-        if(records['delete']){
-          var deletes = records['delete'];
-          if(deletes && deletes[uid]){
-            delete deletes[uid];
-          }
-        }
-      }
-    }
-  },
-
-  checkUidChanges: function(dataset, appliedUpdates){
-    if(appliedUpdates){
-      var new_uids = {};
-      var changeUidsCount = 0;
-      for(var update in appliedUpdates){
-        if(appliedUpdates.hasOwnProperty(update)){
-          var applied_update = appliedUpdates[update];
-          var action = applied_update.action;
-          if(action && action === 'create'){
-            //we are receving the results of creations, at this point, we will have the old uid(the hash) and the real uid generated by the cloud
-            var newUid = applied_update.uid;
-            var oldUid = applied_update.hash;
-            changeUidsCount++;
-            //remember the mapping
-            self.uid_map[oldUid] = newUid;
-            new_uids[oldUid] = newUid;
-            //update the data uid in the dataset
-            var record = dataset.data[oldUid];
-            if(record){
-              dataset.data[newUid] = record;
-              delete dataset.data[oldUid];
-            }
-
-            //update the old uid in meta data
-            var metaData = dataset.meta[oldUid];
-            if(metaData) {
-              dataset.meta[newUid] = metaData;
-              delete dataset.meta[oldUid];
-            }
-          }
-        }
-      }
-      if(changeUidsCount > 0){
-        //we need to check all existing pendingRecords and update their UIDs if they are still the old values
-        for(var pending in dataset.pending){
-          if(dataset.pending.hasOwnProperty(pending)){
-            var pendingObj = dataset.pending[pending];
-            var pendingRecordUid = pendingObj.uid;
-            if(new_uids[pendingRecordUid]){
-              pendingObj.uid = new_uids[pendingRecordUid];
-            }
-          }
-        }
-      }
-    }
+  existingPendingPreHashMap: function(dataset){
+    var pendingPreHashes = dataset.changeHistory || {};
+    return pendingPreHashes;
   },
 
   checkDatasets: function() {
@@ -13250,6 +12880,7 @@ var self = {
           self.consoleLog('updating an existing pending record for dataset :: ' + JSON.stringify(dataset.data[uid]));
           // We are trying to update an existing pending record
           previousPendingUid = dataset.meta[uid].pendingUid;
+          dataset.meta[uid].previousPendingUid = previousPendingUid;
           previousPending = pending[previousPendingUid];
           if(previousPending) {
             if(!previousPending.inFlight){
@@ -13280,6 +12911,7 @@ var self = {
           self.consoleLog('Deleting an existing pending record for dataset :: ' + JSON.stringify(dataset.data[uid]));
           // We are trying to delete an existing pending record
           previousPendingUid = dataset.meta[uid].pendingUid;
+          dataset.meta[uid].previousPendingUid = previousPendingUid;
           previousPending = pending[previousPendingUid];
           if( previousPending ) {
             if(!previousPending.inFlight){
@@ -13318,6 +12950,146 @@ var self = {
     }
   },
 
+  updatePendingFromNewData: function(dataset_id, dataset, newData) {
+    var pending = dataset.pending;
+    var newRec;
+
+    if( pending && newData.records) {
+      for( var pendingHash in pending ) {
+        if( pending.hasOwnProperty(pendingHash) ) {
+          var pendingRec = pending[pendingHash];
+
+          dataset.meta[pendingRec.uid] = dataset.meta[pendingRec.uid] || {};
+
+          if( pendingRec.inFlight === false ) {
+            // Pending record that has not been submitted
+            self.consoleLog('updatePendingFromNewData - Found Non inFlight record -> action=' + pendingRec.action +' :: uid=' + pendingRec.uid  + ' :: hash=' + pendingRec.hash);
+            if( pendingRec.action === "update" || pendingRec.action === "delete") {
+              // Update the pre value of pending record to reflect the latest data returned from sync.
+              // This will prevent a collision being reported when the pending record is sent.
+              newRec = newData.records[pendingRec.uid];
+              if( newRec ) {
+                self.consoleLog('updatePendingFromNewData - Updating pre values for existing pending record ' + pendingRec.uid);
+                pendingRec.pre = newRec.data;
+                pendingRec.preHash = newRec.hash;
+              }
+              else {
+                // The update/delete may be for a newly created record in which case the uid will have changed.
+                var previousPendingUid = dataset.meta[pendingRec.uid].previousPendingUid;
+                var previousPending = pending[previousPendingUid];
+                if( previousPending ) {
+                  if( newData && newData.updates &&  newData.updates.applied && newData.updates.applied[previousPending.hash] ) {
+                    // There is an update in from a previous pending action
+                    var newUid = newData.updates.applied[previousPending.hash].uid;
+                    newRec = newData.records[newUid];
+                    if( newRec ) {
+                      self.consoleLog('updatePendingFromNewData - Updating pre values for existing pending record which was previously a create ' + pendingRec.uid + ' ==> ' + newUid);
+                      pendingRec.pre = newRec.data;
+                      pendingRec.preHash = newRec.hash;
+                      pendingRec.uid = newUid;
+                    }
+                  }
+                }
+              }
+            }
+
+            if( pendingRec.action === "create" ) {
+              if( newData && newData.updates &&  newData.updates.applied && newData.updates.applied[pendingHash] ) {
+                self.consoleLog('updatePendingFromNewData - Found an update for a pending create ' + JSON.stringify(newData.updates.applied[pendingHash]));
+                newRec = newData.records[newData.updates.applied[pendingHash].uid];
+                if( newRec ) {
+                  self.consoleLog('updatePendingFromNewData - Changing pending create to an update based on new record  ' + JSON.stringify(newRec));
+
+                  // Set up the pending create as an update
+                  pendingRec.action = "update";
+                  pendingRec.pre = newRec.data;
+                  pendingRec.preHash = newRec.hash;
+                  pendingRec.uid = newData.updates.applied[pendingHash].uid;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  updateNewDataFromInFlight: function(dataset_id, dataset, newData) {
+    var pending = dataset.pending;
+
+    if( pending && newData.records) {
+      for( var pendingHash in pending ) {
+        if( pending.hasOwnProperty(pendingHash) ) {
+          var pendingRec = pending[pendingHash];
+
+          if( pendingRec.inFlight ) {
+            var updateReceivedForPending = (newData && newData.updates &&  newData.updates.hashes && newData.updates.hashes[pendingHash]) ? true : false;
+
+            self.consoleLog('updateNewDataFromInFlight - Found inflight pending Record - action = ' + pendingRec.action + ' :: hash = ' + pendingHash + ' :: updateReceivedForPending=' + updateReceivedForPending);
+
+            if( ! updateReceivedForPending ) {
+              var newRec = newData.records[pendingRec.uid];
+
+              if( pendingRec.action === "update" && newRec) {
+                // Modify the new Record to have the updates from the pending record so the local dataset is consistent
+                newRec.data = pendingRec.post;
+                newRec.hash = pendingRec.postHash;
+              }
+              else if( pendingRec.action === "delete" && newRec) {
+                // Remove the record from the new dataset so the local dataset is consistent
+                delete newData.records[pendingRec.uid];
+              }
+              else if( pendingRec.action === "create" ) {
+                // Add the pending create into the new dataset so it is not lost from the UI
+                self.consoleLog('updateNewDataFromInFlight - re adding pending create to incomming dataset');
+                var newPendingCreate = {
+                  data: pendingRec.post,
+                  hash: pendingRec.postHash
+                };
+                newData.records[pendingRec.uid] = newPendingCreate;
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  updateNewDataFromPending: function(dataset_id, dataset, newData) {
+    var pending = dataset.pending;
+
+    if( pending && newData.records) {
+      for( var pendingHash in pending ) {
+        if( pending.hasOwnProperty(pendingHash) ) {
+          var pendingRec = pending[pendingHash];
+
+          if( pendingRec.inFlight === false ) {
+            self.consoleLog('updateNewDataFromPending - Found Non inFlight record -> action=' + pendingRec.action +' :: uid=' + pendingRec.uid  + ' :: hash=' + pendingRec.hash);
+            var newRec = newData.records[pendingRec.uid];
+            if( pendingRec.action === "update" && newRec) {
+              // Modify the new Record to have the updates from the pending record so the local dataset is consistent
+              newRec.data = pendingRec.post;
+              newRec.hash = pendingRec.postHash;
+            }
+            else if( pendingRec.action === "delete" && newRec) {
+              // Remove the record from the new dataset so the local dataset is consistent
+              delete newData.records[pendingRec.uid];
+            }
+            else if( pendingRec.action === "create" ) {
+              // Add the pending create into the new dataset so it is not lost from the UI
+              self.consoleLog('updateNewDataFromPending - re adding pending create to incomming dataset');
+              var newPendingCreate = {
+                data: pendingRec.post,
+                hash: pendingRec.postHash
+              };
+              newData.records[pendingRec.uid] = newPendingCreate;
+            }
+          }
+        }
+      }
+    }
+  },
+
   updateCrashedInFlightFromNewData: function(dataset_id, dataset, newData) {
     var updateNotifications = {
       applied: self.notifications.REMOTE_UPDATE_APPLIED,
@@ -13342,8 +13114,32 @@ var self = {
 
               // Check if the updates received contain any info about the crashed in flight update
               var crashedUpdate = newData.updates.hashes[pendingHash];
-              if( !crashedUpdate ) {
-                //TODO: review this - why we need to wait?
+              if( crashedUpdate ) {
+                // We have found an update on one of our in flight crashed records
+
+                resolvedCrashes[crashedUpdate.uid] = crashedUpdate;
+
+                self.consoleLog('updateCrashedInFlightFromNewData - Resolving status for crashed inflight pending record ' + JSON.stringify(crashedUpdate));
+
+                if( crashedUpdate.type === 'failed' ) {
+                  // Crashed update failed - revert local dataset
+                  if( crashedUpdate.action === 'create' ) {
+                    self.consoleLog('updateCrashedInFlightFromNewData - Deleting failed create from dataset');
+                    delete dataset.data[crashedUpdate.uid];
+                  }
+                  else if ( crashedUpdate.action === 'update' || crashedUpdate.action === 'delete' ) {
+                    self.consoleLog('updateCrashedInFlightFromNewData - Reverting failed ' + crashedUpdate.action + ' in dataset');
+                    dataset.data[crashedUpdate.uid] = {
+                      data : pendingRec.pre,
+                      hash : pendingRec.preHash
+                    };
+                  }
+                }
+
+                delete pending[pendingHash];
+                self.doNotify(dataset_id, crashedUpdate.uid, updateNotifications[crashedUpdate.type], crashedUpdate);
+              }
+              else {
                 // No word on our crashed update - increment a counter to reflect another sync that did not give us
                 // any update on our crashed record.
                 if( pendingRec.crashedCount ) {
@@ -13375,9 +13171,15 @@ var self = {
           if( pendingRec.inFlight && pendingRec.crashed) {
             if( pendingRec.crashedCount > dataset.config.crashed_count_wait ) {
               self.consoleLog('updateCrashedInFlightFromNewData - Crashed inflight pending record has reached crashed_count_wait limit : ' + JSON.stringify(pendingRec));
-              self.consoleLog('updateCrashedInFlightFromNewData - Retryig crashed inflight pending record');
-              pendingRec.crashed = false;
-              pendingRec.inFlight = false;
+              if( dataset.config.resend_crashed_updates ) {
+                self.consoleLog('updateCrashedInFlightFromNewData - Retryig crashed inflight pending record');
+                pendingRec.crashed = false;
+                pendingRec.inFlight = false;
+              }
+              else {
+                self.consoleLog('updateCrashedInFlightFromNewData - Deleting crashed inflight pending record');
+                delete pending[pendingHash];
+              }
             }
           }
         }
@@ -13416,9 +13218,21 @@ var self = {
         if(meta.hasOwnProperty(uid)){
           var metadata = meta[uid];
           var pendingHash = metadata.pendingUid;
-          self.consoleLog("updateMetaFromNewData - Found metadata with uid = " + uid + " :: pendingHash = " + pendingHash);
+          var previousPendingHash = metadata.previousPendingUid;
+          self.consoleLog("updateMetaFromNewData - Found metadata with uid = " + uid + " :: pendingHash = " + pendingHash + " :: previousPendingHash =" + previousPendingHash);
+          var previousPendingResolved = true;
           var pendingResolved = true;
-  
+          if(previousPendingHash){
+            //we have previous pending in meta data, see if it's resolved
+            previousPendingResolved = false;
+            var resolved = newData.updates.hashes[previousPendingHash];
+            if(resolved){
+              self.consoleLog("updateMetaFromNewData - Found previousPendingUid in meta data resolved - resolved = " + JSON.stringify(resolved));
+              //the previous pending is resolved in the cloud
+              metadata.previousPendingUid = undefined;
+              previousPendingResolved = true;
+            }
+          }
           if(pendingHash){
             //we have current pending in meta data, see if it's resolved
             pendingResolved = false;
@@ -13431,7 +13245,7 @@ var self = {
             }
           }
 
-          if(pendingResolved){
+          if(previousPendingResolved && pendingResolved){
             self.consoleLog("updateMetaFromNewData - both previous and current pendings are resolved for meta data with uid " + uid + ". Delete it.");
             //all pendings are resolved, the entry can be removed from meta data
             delete meta[uid];
@@ -13505,7 +13319,6 @@ module.exports = {
   checkHasCustomSync: self.checkHasCustomSync,
   clearCache: self.clearCache
 };
-
 },{"../../libs/generated/crypto":1,"../../libs/generated/lawnchair":2,"./api_act":22,"./api_cloud":24}],51:[function(_dereq_,module,exports){
 module.exports = {
   createUUID : function () {
@@ -13634,5 +13447,3 @@ module.exports = {
 },{"./appProps":29,"./constants":31,"./data":33,"./events":35,"./fhparams":36,"./hosts":38,"./initializer":39,"./logger":42}]},{},[19])
 (19)
 });
-}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[1]);
