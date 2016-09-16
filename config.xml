@@ -25,5 +25,5 @@
         <allow-intent href="itms-apps:*" />
     </platform>
     <plugin name="cordova-plugin-whitelist" spec="https://github.com/apache/cordova-plugin-whitelist"/>
-    <plugin name="aerogear-cordova-push" spec="https://github.com/feedhenry/aerogear-cordova-push#no-dupe-permission"/>
+    <plugin name="aerogear-cordova-push" spec="https://github.com/aerogear/aerogear-cordova-push#3.0.x-cdv-droid411"/>
 </widget>
