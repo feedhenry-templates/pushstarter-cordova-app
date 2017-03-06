@@ -4347,34 +4347,9 @@ Lawnchair.adapter('indexed-db', (function(){
 
 })());
 Lawnchair.adapter('html5-filesystem', (function(global){
-
-  var FileError = global.FileError;
-
+  
   var fail = function( e ) {
-    var msg;
-    var show = true;
-    switch (e.code) {
-      case FileError.QUOTA_EXCEEDED_ERR:
-        msg = 'QUOTA_EXCEEDED_ERR';
-        break;
-      case FileError.NOT_FOUND_ERR:
-        msg = 'NOT_FOUND_ERR';
-        show = false;
-        break;
-      case FileError.SECURITY_ERR:
-        msg = 'SECURITY_ERR';
-        break;
-      case FileError.INVALID_MODIFICATION_ERR:
-        msg = 'INVALID_MODIFICATION_ERR';
-        break;
-      case FileError.INVALID_STATE_ERR:
-        msg = 'INVALID_STATE_ERR';
-        break;
-      default:
-        msg = 'Unknown Error';
-        break;
-    };
-    if ( console && show ) console.error( e, msg );
+    if ( console ) console.error(e, e.name);
   };
 
   var ls = function( reader, callback, entries ) {
@@ -4675,6 +4650,7 @@ Lawnchair.adapter('html5-filesystem', (function(global){
     }
   };
 }(this)));
+
 Lawnchair.adapter('memory', (function(){
 
     var data = {}
@@ -11023,7 +10999,7 @@ var load = function(cb) {
      app_props.host = url_params.url; 
     }
     
-    app_props.local = !!(url_props.host || url_params.url);
+    app_props.local = !!(url_props.host || url_params.url || (props.local && props.host));
     cb(null, app_props);
   }
 
@@ -11186,7 +11162,7 @@ module.exports = {
 },{"./data":33,"./fhparams":36,"./logger":42,"./queryMap":44}],31:[function(_dereq_,module,exports){
 module.exports = {
   "boxprefix": "/box/srv/1.1/",
-  "sdk_version": "2.18.1",
+  "sdk_version": "2.18.4",
   "config_js": "fhconfig.json",
   "INIT_EVENT": "fhinit",
   "INTERNAL_CONFIG_LOADED_EVENT": "internalfhconfigloaded",
@@ -12766,66 +12742,60 @@ var self = {
             if( pendingArray.length > 0 ) {
               self.consoleLog('Starting sync loop - global hash = ' + dataSet.hash + ' :: params = ' + JSON.stringify(syncLoopParams, null, 2));
             }
-            try {
-              self.doCloudCall({
-                'dataset_id': dataset_id,
-                'req': syncLoopParams
-              }, function(res) {
-                var rec;
+            self.doCloudCall({
+              'dataset_id': dataset_id,
+              'req': syncLoopParams
+            }, function(res) {
+              var rec;
 
-                function processUpdates(updates, notification, acknowledgements) {
-                  if( updates ) {
-                    for (var up in updates) {
-                      rec = updates[up];
-                      acknowledgements.push(rec);
-                      if( dataSet.pending[up] && dataSet.pending[up].inFlight) {
-                        delete dataSet.pending[up];
-                        self.doNotify(dataset_id, rec.uid, notification, rec);
-                      }
+              function processUpdates(updates, notification, acknowledgements) {
+                if( updates ) {
+                  for (var up in updates) {
+                    rec = updates[up];
+                    acknowledgements.push(rec);
+                    if( dataSet.pending[up] && dataSet.pending[up].inFlight) {
+                      delete dataSet.pending[up];
+                      self.doNotify(dataset_id, rec.uid, notification, rec);
                     }
                   }
                 }
+              }
 
-                // Check to see if any previously crashed inflight records can now be resolved
-                self.updateCrashedInFlightFromNewData(dataset_id, dataSet, res);
+              // Check to see if any previously crashed inflight records can now be resolved
+              self.updateCrashedInFlightFromNewData(dataset_id, dataSet, res);
 
-                //Check to see if any delayed pending records can now be set to ready
-                self.updateDelayedFromNewData(dataset_id, dataSet, res);
+              //Check to see if any delayed pending records can now be set to ready
+              self.updateDelayedFromNewData(dataset_id, dataSet, res);
 
-                //Check meta data as well to make sure it contains the correct info
-                self.updateMetaFromNewData(dataset_id, dataSet, res);
+              //Check meta data as well to make sure it contains the correct info
+              self.updateMetaFromNewData(dataset_id, dataSet, res);
 
 
-                if (res.updates) {
-                  var acknowledgements = [];
-                  self.checkUidChanges(dataSet, res.updates.applied);
-                  processUpdates(res.updates.applied, self.notifications.REMOTE_UPDATE_APPLIED, acknowledgements);
-                  processUpdates(res.updates.failed, self.notifications.REMOTE_UPDATE_FAILED, acknowledgements);
-                  processUpdates(res.updates.collisions, self.notifications.COLLISION_DETECTED, acknowledgements);
-                  dataSet.acknowledgements = acknowledgements;
-                }
+              if (res.updates) {
+                var acknowledgements = [];
+                self.checkUidChanges(dataSet, res.updates.applied);
+                processUpdates(res.updates.applied, self.notifications.REMOTE_UPDATE_APPLIED, acknowledgements);
+                processUpdates(res.updates.failed, self.notifications.REMOTE_UPDATE_FAILED, acknowledgements);
+                processUpdates(res.updates.collisions, self.notifications.COLLISION_DETECTED, acknowledgements);
+                dataSet.acknowledgements = acknowledgements;
+              }
 
-                if (res.hash && res.hash !== dataSet.hash) {
-                  self.consoleLog("Local dataset stale - syncing records :: local hash= " + dataSet.hash + " - remoteHash=" + res.hash);
-                  // Different hash value returned - Sync individual records
-                  self.syncRecords(dataset_id);
-                } else {
-                  self.consoleLog("Local dataset up to date");
-                  self.syncComplete(dataset_id,  "online", self.notifications.SYNC_COMPLETE);
-                }
-              }, function(msg, err) {
-                // The AJAX call failed to complete succesfully, so the state of the current pending updates is unknown
-                // Mark them as "crashed". The next time a syncLoop completets successfully, we will review the crashed
-                // records to see if we can determine their current state.
-                self.markInFlightAsCrashed(dataSet);
-                self.consoleLog("syncLoop failed : msg=" + msg + " :: err = " + err);
-                self.syncComplete(dataset_id, msg, self.notifications.SYNC_FAILED);
-              });
-            }
-            catch (e) {
-              self.consoleLog('Error performing sync - ' + e);
-              self.syncComplete(dataset_id, e, self.notifications.SYNC_FAILED);
-            }
+              if (res.hash && res.hash !== dataSet.hash) {
+                self.consoleLog("Local dataset stale - syncing records :: local hash= " + dataSet.hash + " - remoteHash=" + res.hash);
+                // Different hash value returned - Sync individual records
+                self.syncRecords(dataset_id);
+              } else {
+                self.consoleLog("Local dataset up to date");
+                self.syncComplete(dataset_id,  "online", self.notifications.SYNC_COMPLETE);
+              }
+            }, function(msg, err) {
+              // The AJAX call failed to complete succesfully, so the state of the current pending updates is unknown
+              // Mark them as "crashed". The next time a syncLoop completets successfully, we will review the crashed
+              // records to see if we can determine their current state.
+              self.markInFlightAsCrashed(dataSet);
+              self.consoleLog("syncLoop failed : msg=" + msg + " :: err = " + err);
+              self.syncComplete(dataset_id, msg, self.notifications.SYNC_FAILED);
+            });
           });
         }
       });
@@ -13063,30 +13033,47 @@ var self = {
   },
 
   doCloudCall: function(params, success, failure) {
-    var hasCustomSync = false;
-    var dataset = self.datasets[params.dataset_id];
-    if(dataset && dataset.config){
-      hasCustomSync = dataset.config.has_custom_sync;
+    var callbackCalled = false;
+    try {
+      var hasCustomSync = false;
+      var dataset = self.datasets[params.dataset_id];
+      if(dataset && dataset.config){
+        hasCustomSync = dataset.config.has_custom_sync;
+      }
+      if( hasCustomSync === true ) {
+        actAPI({
+          'act' : params.dataset_id,
+          'req' : params.req
+        }, function(res) {
+          callbackCalled = true;
+          success(res);
+        }, function(msg, err) {
+          callbackCalled = true;
+          failure(msg, err);
+        });      
+      } else {
+        cloudAPI({
+          'path' : '/mbaas/sync/' + params.dataset_id,
+          'method' : 'post',
+          'data' : params.req
+        }, function(res) {
+          callbackCalled = true;
+          success(res);
+        }, function(msg, err) {
+          callbackCalled = true;
+          failure(msg, err);
+        });
+      }
     }
-    if( hasCustomSync === true ) {
-      actAPI({
-        'act' : params.dataset_id,
-        'req' : params.req
-      }, function(res) {
-        success(res);
-      }, function(msg, err) {
-        failure(msg, err);
-      });      
-    } else {
-      cloudAPI({
-        'path' : '/mbaas/sync/' + params.dataset_id,
-        'method' : 'post',
-        'data' : params.req
-      }, function(res) {
-        success(res);
-      }, function(msg, err) {
-        failure(msg, err);
-      });
+    catch (e) {
+      var msg = 'Exception in doCloudCall - ' + e;
+      self.consoleLog(msg);
+      // only call the failure callback if success/failure hasn't been called already
+      // This will prevent exceptions thrown in the success/failure callback resulting in that fn being called again
+      // i.e. only let the caller known about exceptions up to the point of the ajax call being made.
+      if (!callbackCalled) {
+        failure(msg, e);
+      }
     }
   },
 
@@ -13448,7 +13435,8 @@ module.exports = {
   generateHash: self.generateHash,
   loadDataSet: self.loadDataSet,
   checkHasCustomSync: self.checkHasCustomSync,
-  clearCache: self.clearCache
+  clearCache: self.clearCache,
+  doCloudCall: self.doCloudCall
 };
 
 },{"../../libs/generated/crypto":1,"../../libs/generated/lawnchair":2,"./api_act":22,"./api_cloud":24}],51:[function(_dereq_,module,exports){
