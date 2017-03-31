@@ -13,7 +13,7 @@ Prerequisites: fh-js-sdk : 2.14.+, Cordova : 5.0 or newer
 
 ## What is it?
 
-This application shows a list of the push messages that have been recieved with RHMAP.  Refer to `fhconfig.json` for the relevant configuraiton.
+This application shows a list of the push messages that have been recieved with RHMAP.  Refer to `www/fhconfig.json` for the relevant configuraiton.
 
 If you do not have access to a RHMAP instance, you can sign up for a free instance at [https://openshift.feedhenry.com/](https://openshift.feedhenry.com/).
 
@@ -36,15 +36,15 @@ If you wish to contribute to this template, the following information may be hel
 
 ## Build instructions
  * npm install
- * Edit `fhconfig.json` to include the relevant information from RHMAP.
+ * Edit `www/fhconfig.json` to include the relevant information from RHMAP.
  * cordova run --device
 
 ### npm dependencies
-The `fh-js-sdk` and other development dependencies are defined in `package.json` and included in a `main.js`.
+The `fh-js-sdk` and other development dependencies are defined in `package.json` and included in a `www/main.js`.
 
-* This generated `main.js` file is checked-in to allow RHMAP studio preview to statically serve dependencies.
+* This generated `www/main.js` file is checked-in to allow RHMAP studio preview to statically serve dependencies.
 
-* The `init.js` file is browserified and acts as a bridge between template script and npm dependencies. 
+* The `www/js/init.js` file is browserified and acts as a bridge between template script and npm dependencies. 
 
 * All the other JavaScript files in the template app will not be browserified, in order for you to be able to experiment live edit in RHMAP Studio preview.
 
@@ -67,8 +67,8 @@ This template uses [Grunt](http://gruntjs.com/), the Javascript Task Runner. To 
 
 ### Initialization
 
-`index.js` (line 30) is the method which is responsible for configuring and setting up push.  Further details are available in our [API documentation](http://docs.feedhenry.com/v3/api/api_push.html).
+`register` in `www/js/index.js` is the method which is responsible for configuring and setting up push.  Further details are available in our [API documentation](http://docs.feedhenry.com/v3/api/api_push.html).
 
 ### Sending messages
 
-Once a message is received the `index.js` (line 45) callback is called and will display the message on the UI. You can send messages from the RHMAP studio under the push tab.
+Once a message is received the `onNotification(event)` callback in `www/js/index.js` is called and will display the message on the UI. You can send messages from the RHMAP studio under the push tab.
